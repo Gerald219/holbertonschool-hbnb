@@ -71,6 +71,8 @@ Review "*" --> "1" Place : about
 Review "*" --> "1" User : by
 ```i
 
+![Class Diagram](./class_diagram.png)
+
 ---
 
 ### Class Explanations
@@ -89,6 +91,13 @@ Represents someone using the app. Each user:
 - Has a first name, last name, email, and password  
 - Can update their profile
 
+flowchart TD
+    A[User] --> B[Has first name, last name, email, password]
+    A --> C[Can update their profile]
+    A --> D[Can be marked as admin or regular]
+    A --> E[Can own places]
+    A --> F[Can write reviews]
+
 **Place**  
 Represents a property (house or apartment):  
 - Belongs to a user 
@@ -97,11 +106,28 @@ Represents a property (house or apartment):
 - Can be reviewed and have amenities  
 - Can be published using a method  
 
+flowchart TD
+    A[Place Class] -->|user_id| B(Belongs to a user)
+    A -->|title, description, price, location| C(Has main details)
+    A -->|latitude and longitude| D(Stores coordinates)
+    A -->|reviews| E(Can be reviewed)
+    A -->|amenities| F(Can have amenities)
+    A -->|publish method| G(Can be published)
+
 **Review**  
 This is a comment left by a user about a place. It:  
 - Includes a rating and a comment  
 - Links to both the user and the place  
 - Can be submitted using a method  
+
+flowchart TD
+    A[Review Class]
+
+    A --> R1[rating: score given to place]
+    A --> R2[comment: written feedback]
+    A --> R3[user_id: who wrote the review]
+    A --> R4[place_id: place being reviewed]
+    A --> R5[submit method: submits the review]
 
 **Amenity**  
 An extra feature a place has attached to It:  
@@ -109,6 +135,15 @@ An extra feature a place has attached to It:
 - Can be marked as active or inactive  
 - Has a method to turn it on or off  
 - Has a method to describe itself  
+
+flowchart TD
+    A[Amenity Class]
+
+    A --> AM1[name: name of the amenity]
+    A --> AM2[description: what it is or does]
+    A --> AM3[is_active: marks if amenity is available]
+    A --> AM4[toggle_active: turns the amenity on/off]
+    A --> AM5[describe: returns a description of the amenity]
 
 **Inheritance**  
 All classes inherit from **BaseModel**. This means they:  
