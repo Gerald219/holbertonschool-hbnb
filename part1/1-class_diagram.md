@@ -169,16 +169,19 @@ All classes inherit from **BaseModel**, meaning they:
 ---
 
 ### Relationships  
-Users can own places and write reviews.  
-Places can have many reviews and amenities.  
-Each review is written by a user and is about one place.
+This section shows how the main classes interact:
+- Users can own places  
+- Users can write reviews  
+- Places can have reviews  
+- Places can have amenities  
+- Each review is written by a user and is about one place
 
 ```mermaid
 classDiagram
-User "1" --> "*" Place : owns        %% A user can own many places
-User "1" --> "*" Review : writes     %% A user can write many reviews
-Place "1" --> "*" Review : receives  %% A place can have many reviews
-Place "1" --> "*" Amenity : has      %% A place can have many amenities
-Review "*" --> "1" Place : about     %% A review is about one place
-Review "*" --> "1" User : by         %% A review is written by one user
+User "1" --> "*" Place : owns
+User "1" --> "*" Review : writes
+Place "1" --> "*" Review : receives
+Place "1" --> "*" Amenity : has
+Review "*" --> "1" Place : about
+Review "*" --> "1" User : by
 ```
