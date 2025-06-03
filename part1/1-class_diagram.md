@@ -74,6 +74,64 @@ Review "*" --> "1" User : by
 ![Class Diagram](./class_diagram.png)
 
 ---
+---
+
+## Entity Notes
+
+### User
+
+**Attributes**
+- `first_name` *(string)* — User's first name
+- `last_name` *(string)* — User's last name
+- `email` *(string)* — Email address (used for login and communication)
+- `password` *(string)* — Encrypted password for authentication
+- `is_admin` *(bool)* — Flag indicating admin privileges
+
+**Methods**
+- `update_profile()` — Update the user's personal information
+
+---
+
+### Place
+
+**Attributes**
+- `title` *(string)* — Title of the place listing
+- `description` *(string)* — Description of the space
+- `price` *(float)* — Cost per night
+- `latitude` *(float)* — Geo-location latitude
+- `longitude` *(float)* — Geo-location longitude
+- `user_id` *(UUID)* — Reference to the user who created the place
+
+**Methods**
+- `publish()` — Make the place publicly available
+
+---
+
+### Review
+
+**Attributes**
+- `rating` *(int)* — Star rating given by the user
+- `comment` *(string)* — Written feedback about a place
+- `user_id` *(UUID)* — Reference to the user who wrote the review
+- `place_id` *(UUID)* — Reference to the place being reviewed
+
+**Methods**
+- `submit()` — Save and validate the review
+
+---
+
+### Amenity
+
+**Attributes**
+- `name` *(string)* — Name of the amenity (e.g., Wi-Fi)
+- `description` *(string)* — Optional longer explanation of the amenity
+- `is_active` *(bool)* — Whether the amenity is currently available
+
+**Methods**
+- `toggle_active()` — Enable or disable the amenity
+- `describe()` — Return formatted description for display
+
+---
 
 ### Class Explanations
 
