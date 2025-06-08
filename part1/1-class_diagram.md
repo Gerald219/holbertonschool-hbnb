@@ -185,3 +185,5 @@ Place "1" --> "*" Amenity : has
 Review "*" --> "1" Place : about
 Review "*" --> "1" User : by
 ```
+
+---
