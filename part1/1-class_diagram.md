@@ -158,32 +158,30 @@ flowchart TD
 ```
 
 ---
+### Inheritance
 
-### Inheritance  
-All classes inherit from **BaseModel**, meaning they:
+All classes inherit from `BaseModel`, meaning they:
+
 - Automatically get ID and timestamps  
-- Have `save()` and `to_dict()` methods
- 
-```
+- Have `save()` and `to_dict()` methods  
 
 ---
 
-### Relationships  
+### Relationships
+
 This section shows how the main classes interact:
+
 - Users can own places  
 - Users can write reviews  
 - Places can have reviews  
 - Places can have amenities  
-- Each review is written by a user and is about one place
+- Each review is written by a user and is about one place  
 
 ```mermaid
 classDiagram
-User "1" --> "*" Place : owns
-User "1" --> "*" Review : writes
-Place "1" --> "*" Review : receives
-Place "1" --> "*" Amenity : has
-Review "*" --> "1" Place : about
-Review "*" --> "1" User : by
-```
-
----
+    User "1" --> "*" Place : owns
+    User "1" --> "*" Review : writes
+    Place "1" --> "*" Review : receives
+    Place "1" --> "*" Amenity : has
+    Review "*" --> "1" Place : about
+    Review "*" --> "1" User : by
