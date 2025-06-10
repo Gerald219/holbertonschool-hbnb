@@ -37,6 +37,8 @@ API --> Services
 Services --> Models
 Models --> DBStorage
 DBStorage --> Database
+```
+
 ---
 
 ## 2. Business Logic Layer – Class Diagram
@@ -80,6 +82,8 @@ classDiagram
     BaseModel <|-- Place
     BaseModel <|-- Review
     BaseModel <|-- Amenity
+```
+
 ---
 
 ## 3. Place Class Overview
@@ -99,7 +103,7 @@ classDiagram
         +int number_rooms
         +int number_bathrooms
         +int max_guest
-        +int price_by_night
+   ```     +int price_by_night
         +list amenities
         +datetime created_at
         +datetime updated_at
