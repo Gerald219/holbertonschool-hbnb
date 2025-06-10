@@ -1,52 +1,33 @@
-## **Part 1: Technical Documentation**
+# HBnB Project — Diagrams & Documentation
 
-This part focuses on designing the core structure of the HBnB Evolution application. It includes:
+This repo holds the visual documentation for the HBnB system we design at Holberton.
 
-- A **high-level package diagram** showing the three-layer architecture (Presentation, Business Logic, Persistence) and how they interact using the facade pattern.
-- A **detailed class diagram** for the Business Logic layer, covering the main entities: User, Place, Review, and Amenity — with all attributes, methods, and relationships (including inheritance).
-- A section with **class explanations** that describe what each class does, what attributes it holds, and how the classes are connected.
-- These diagrams and notes lay the foundation for how the app will work internally and guide the implementation in later parts of the project.
+The point of the project is to break the app into three clear layers — frontend/API, business logic, and storage, to show how everything connects. 
+**We also mapped out what happens when a user does things like register, post a review, or fetch a list of places.**
 
-### Class Explanations
+---
 
-**BaseModel**  
-This is the main “template” for every class. It gives each object:  
-- A unique ID  
-- Timestamps to track when it was made and last changed  
-- Functions to save itself or convert the object to a dictionary  
+## What’s in this repo
 
-**User**  
-Represents someone using the app. Each user:  
-- Can own places  
-- Can write reviews  
-- Can be marked as admin or regular  
-- Has a first name, last name, email, and password  
-- Can update their profile
+Everything’s in one file:  
+`part1/6-documentation.md`
 
-**Place**  
-Represents a property (house or apartment):  
-- Belongs to a user 
-- Has a title, description, price, and location  
-- Stores latitude and longitude to show location of property
-- Can be reviewed and have amenities  
-- Can be published using a method  
+Inside that file you’ll find:
 
-**Review**  
-This is a comment left by a user about a place. It:  
-- Includes a rating and a comment  
-- Links to both the user and the place  
-- Can be submitted using a method  
+- A package diagram that shows the whole system 
+- Class diagrams for the key parts of the app: User, Place, Review, Amenity  
+- A breakdown of how the classes work and what fields they include  
+- Sequence diagrams for four main API calls:
+  - User registration  
+  - Place creation  
+  - Review submission  
+  - Getting a list of places
 
-**Amenity**  
-An extra feature a place has attached to It:  
-- Has a name and description  
-- Can be marked as active or inactive  
-- Has a method to turn it on or off  
-- Has a method to describe itself  
+All the diagrams use Mermaid, and every part is explained in plain language.
 
-**Inheritance**  
-All classes inherit from **BaseModel**. This means they:  
-- Automatically get a unique ID  
-- Have timestamps for creation and updates  
-- Can save themselves  
-- Can be converted to dictionaries 
+---
+
+## Author
+
+Gerald Mulero  
+Holberton School - Puerto Rico Campus
