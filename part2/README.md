@@ -121,5 +121,5 @@ Here are the main routes you can interact with:
 
 ### Author
 
-Project built by **Gerald Mulero** for Holberto School Of Code-craft and Wizardry.
+Project built by **Gerald Mulero** for Holberto Coding School.
 
