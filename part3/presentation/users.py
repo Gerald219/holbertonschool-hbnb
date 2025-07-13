@@ -2,6 +2,7 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from persistence.repository import InMemoryRepository
 from business.user import User
+from flask_jwt_extended import create_access_token
 
 api = Namespace('users', description='User operations')
 
@@ -62,3 +63,19 @@ class User(Resource):
         if not deleted_user:
             api.abort(404, "User not found")
         return '', 204
+
+@api.route('/login')
+class UserLogin(Resource):
+    def post(self):
+        data = request.json
+        email = data.get("email")
+        password = data.get("password")
+        users = repo.get_all("users")
+        user = next((u for u in users if u.get("email") == email), None)
+        if not user:
+            return {"msg": "Invalid email or password"}, 401
+        user_obj = User(**user)
+        if not user_obj.check_password(password):
+            return {"msg": "Invalid email or password"}, 401
+        token = create_access_token(identity=user["id"])
+        return {"access_token": token}, 200
