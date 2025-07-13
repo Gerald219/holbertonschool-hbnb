@@ -3,6 +3,7 @@ from flask_restx import Namespace, Resource, fields
 from persistence.repository import InMemoryRepository
 from business.user import User
 from flask_jwt_extended import create_access_token
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 api = Namespace('users', description='User operations')
 
@@ -48,8 +49,9 @@ class User(Resource):
         user.pop("password", None)
         return user
 
-    @api.expect(user_model)
+        @api.expect(user_model)
     @api.marshal_with(user_model)
+    @jwt_required()
     def put(self, user_id):
         updates = request.json
         updated_user = repo.update("users", user_id, updates)
@@ -57,6 +59,7 @@ class User(Resource):
             api.abort(404, "User not found")
         updated_user.pop("password", None)
         return updated_user
+
 
     def delete(self, user_id):
         deleted_user = repo.delete("users", user_id)
