@@ -4,6 +4,7 @@ from persistence.repository import InMemoryRepository
 from business.user import User
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from business.auth_utils import admin_required
 
 api = Namespace('users', description='User operations')
 
@@ -61,6 +62,8 @@ class User(Resource):
         return updated_user
 
 
+        @jwt_required()
+    @admin_required(repo)
     def delete(self, user_id):
         deleted_user = repo.delete("users", user_id)
         if not deleted_user:
