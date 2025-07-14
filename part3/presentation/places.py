@@ -1,9 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from persistence.repository import InMemoryRepository
+from business.place import Place
+from app import db
 
 api = Namespace('places', description='Place operations')
-repo = InMemoryRepository()
+
 
 place_model = api.model('Place', {
     'id': fields.String(readonly=True),
@@ -23,7 +24,13 @@ place_model = api.model('Place', {
 class PlaceList(Resource):
     @api.marshal_list_with(place_model)
     def get(self):
-        return repo.get_all("places")
+        places = Place.query.all()
+        result = []
+        for place in places:
+            place_data = place.__dict__.copy()
+            place_data.pop("_sa_instance_state", None)
+            result.append(place_data)
+        return result
 
     @api.expect(place_model)
     @api.marshal_with(place_model, code=201)
