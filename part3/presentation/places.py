@@ -38,7 +38,7 @@ class PlaceList(Resource):
         data = request.json
         return repo.save("places", data), 201
 
-@api.route('/<string:place_id>')
+    @api.route('/<string:place_id>')
 @api.param('place_id', 'The place ID')
 class Place(Resource):
     @api.marshal_with(place_model)
@@ -50,12 +50,17 @@ class Place(Resource):
         place_data.pop("_sa_instance_state", None)
         return place_data
 
-
     @api.expect(place_model)
     @api.marshal_with(place_model)
     def put(self, place_id):
-        updates = request.json
-        updated = repo.update("places", place_id, updates)
-        if not updated:
+        place = Place.query.get(place_id)
+        if not place:
             api.abort(404, "Place not found")
-        return updated
+        updates = request.json
+        for key, value in updates.items():
+            setattr(place, key, value)
+        db.session.commit()
+        updated_place = place.__dict__.copy()
+        updated_place.pop("_sa_instance_state", None)
+        return updated_place
+
