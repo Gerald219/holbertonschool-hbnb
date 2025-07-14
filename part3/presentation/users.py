@@ -1,10 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from persistence.repository import InMemoryRepository
 from business.user import User
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from business.auth_utils import admin_required
+from app import db
 
 api = Namespace('users', description='User operations')
 
@@ -18,25 +18,29 @@ user_model = api.model('User', {
     'updated_at': fields.String(readonly=True)
 })
 
-repo = InMemoryRepository()
-
 @api.route('/')
 class UserList(Resource):
     @api.marshal_list_with(user_model)
     def get(self):
-        users = repo.get_all("users")
+        users = User.query.all()
+        result = []
         for user in users:
-        user.pop("password", None)
-        return users
+            user_data = user.__dict__.copy()
+            user_data.pop("_sa_instance_state", None)
+            user_data.pop("password", None)
+            result.append(user_data)
+        return result
 
     @api.expect(user_model)
     @api.marshal_with(user_model, code=201)
     def post(self):
         data = request.json
         new_user = User(**data)
+        db.session.add(new_user)
+        db.session.commit()
         user_dict = new_user.__dict__.copy()
+        user_dict.pop("_sa_instance_state", None)
         user_dict.pop("password", None)
-        repo.save("users", user_dict)
         return user_dict, 201
 
 @api.route('/<string:user_id>')
@@ -44,30 +48,46 @@ class UserList(Resource):
 class User(Resource):
     @api.marshal_with(user_model)
     def get(self, user_id):
-        user = repo.get("users", user_id)
+        user = User.query.get(user_id)
         if not user:
             api.abort(404, "User not found")
-        user.pop("password", None)
-        return user
+        user_data = user.__dict__.copy()
+        user_data.pop("_sa_instance_state", None)
+        user_data.pop("password", None)
+        return user_data
 
-        @api.expect(user_model)
+    @api.expect(user_model)
     @api.marshal_with(user_model)
     @jwt_required()
     def put(self, user_id):
+        user = User.query.get(user_id)
+        if not user:
+            api.abort(404, "User not found")
         updates = request.json
-        updated_user = repo.update("users", user_id, updates)
-        if not updated_user:
-            api.abort(404, "User not found")
-        updated_user.pop("password", None)
-        return updated_user
+        if "password" in updates:
+            user.password = updates["password"]
+        if "first_name" in updates:
+            user.first_name = updates["first_name"]
+        if "last_name" in updates:
+            user.last_name = updates["last_name"]
+        if "email" in updates:
+            user.email = updates["email"]
+        if "is_admin" in updates:
+            user.is_admin = updates["is_admin"]
+        db.session.commit()
+        user_data = user.__dict__.copy()
+        user_data.pop("_sa_instance_state", None)
+        user_data.pop("password", None)
+        return user_data
 
-
-        @jwt_required()
-    @admin_required(repo)
+    @jwt_required()
+    @admin_required
     def delete(self, user_id):
-        deleted_user = repo.delete("users", user_id)
-        if not deleted_user:
+        user = User.query.get(user_id)
+        if not user:
             api.abort(404, "User not found")
+        db.session.delete(user)
+        db.session.commit()
         return '', 204
 
 @api.route('/login')
@@ -76,12 +96,9 @@ class UserLogin(Resource):
         data = request.json
         email = data.get("email")
         password = data.get("password")
-        users = repo.get_all("users")
-        user = next((u for u in users if u.get("email") == email), None)
-        if not user:
+        user = User.query.filter_by(email=email).first()
+        if not user or not user.check_password(password):
             return {"msg": "Invalid email or password"}, 401
-        user_obj = User(**user)
-        if not user_obj.check_password(password):
-            return {"msg": "Invalid email or password"}, 401
-        token = create_access_token(identity=user["id"])
+        token = create_access_token(identity=user.id)
         return {"access_token": token}, 200
+
