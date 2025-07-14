@@ -23,3 +23,7 @@ class User(BaseModel):
         self.email = kwargs.get("email", "")
         self.is_admin = kwargs.get("is_admin", False)
 
+        super().__init__(**kwargs)
+
+    def check_password(self, password):
+        return bcrypt.checkpw(password.encode(), self.password.encode())
