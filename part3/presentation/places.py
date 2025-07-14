@@ -43,10 +43,13 @@ class PlaceList(Resource):
 class Place(Resource):
     @api.marshal_with(place_model)
     def get(self, place_id):
-        place = repo.get("places", place_id)
+        place = Place.query.get(place_id)
         if not place:
             api.abort(404, "Place not found")
-        return place
+        place_data = place.__dict__.copy()
+        place_data.pop("_sa_instance_state", None)
+        return place_data
+
 
     @api.expect(place_model)
     @api.marshal_with(place_model)
