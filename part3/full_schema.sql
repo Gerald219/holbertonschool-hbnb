@@ -16,3 +16,10 @@ CREATE TABLE amenities (
     updated_at DATETIME
 );
 
+CREATE TABLE place_amenity (
+    place_id VARCHAR(60),
+    amenity_id VARCHAR(60),
+    PRIMARY KEY (place_id, amenity_id),
+    FOREIGN KEY (place_id) REFERENCES places(id),
+    FOREIGN KEY (amenity_id) REFERENCES amenities(id)
+);
