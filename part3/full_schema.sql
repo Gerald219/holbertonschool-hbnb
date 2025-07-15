@@ -59,3 +59,10 @@ INSERT INTO places (
     DATETIME('now')
 );
 
+INSERT INTO place_amenity (place_id, amenity_id) VALUES
+('place-multiple/unit-001', 'amenity-001'), -- Wi-Fi
+('place-multiple/unit-001', 'amenity-002'), -- Air Conditioning
+('place-multiple/unit-001', 'amenity-003'), -- Swimming Pool
+('place-multiple/unit-001', 'amenity-004'), -- Washer/Dryer
+('place-multiple/unit-001', 'amenity-005'); -- Parking
+
