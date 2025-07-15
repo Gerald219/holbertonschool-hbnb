@@ -42,3 +42,20 @@ INSERT INTO amenities (id, name, created_at, updated_at) VALUES
 ('amenity-003', 'Swimming Pool', DATETIME('now'), DATETIME('now')),
 ('amenity-004', 'Washer/Dryer', DATETIME('now'), DATETIME('now')),
 ('amenity-005', 'Parking', DATETIME('now'), DATETIME('now'));
+
+INSERT INTO places (
+    id, name, description, city, price_per_night,
+    latitude, longitude, owner_id, created_at, updated_at
+) VALUES (
+    'place-multiple/unit-001',
+    'Great view from the south-west - Cabo Rojo',
+    'House and cottage/camp area, great for big families that love outdoor settings.',
+    'Cabo Rojo',
+    225,
+    17.9810,
+    -67.2125,
+    '001-gerald',
+    DATETIME('now'),
+    DATETIME('now')
+);
+
