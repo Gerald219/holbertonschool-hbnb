@@ -1,8 +1,9 @@
+from app.extensions import db
 from business.base_model import BaseModel
-from app import db
 
 class Amenity(BaseModel):
     __tablename__ = "amenities"
+    BaseModel.configure_fields(db)
 
     name = db.Column(db.String(128), nullable=False)
     places = db.relationship("Place", secondary="place_amenity", backref="amenities")

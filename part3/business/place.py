@@ -1,5 +1,6 @@
+from app.extensions import db
 from business.base_model import BaseModel
-from app import db
+from datetime import datetime
 
 place_amenity = db.Table(
     'place_amenity',
@@ -7,8 +8,9 @@ place_amenity = db.Table(
     db.Column('amenity_id', db.String(60), db.ForeignKey('amenities.id'), primary_key=True)
 )
 
-class Place(BaseModel):
+class Place(BaseModel, db.Model):
     __tablename__ = "places"
+    BaseModel.configure_fields(db)
 
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.String(1024))
@@ -19,7 +21,6 @@ class Place(BaseModel):
 
     owner_id = db.Column(db.String(60), db.ForeignKey('users.id'), nullable=False)
 
-    # Relationships
     owner = db.relationship("User", backref="places")
     reviews = db.relationship("Review", backref="place", cascade="all, delete")
     amenities = db.relationship("Amenity", secondary=place_amenity, backref="places")

@@ -1,8 +1,9 @@
+from app.extensions import db
 from business.base_model import BaseModel
-from app import db
 
-class Review(BaseModel):
+class Review(BaseModel, db.Model):
     __tablename__ = "reviews"
+    BaseModel.configure_fields(db)
 
     text = db.Column(db.String(1024), nullable=False)
     user_id = db.Column(db.String(60), db.ForeignKey("users.id"), nullable=False)
