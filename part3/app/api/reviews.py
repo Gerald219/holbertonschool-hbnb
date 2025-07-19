@@ -18,4 +18,13 @@ def create_review(place_id):
     place = get_repository(Place).get(place_id)
     if not place:
         return jsonify({'message': 'Place not found'}), 404
-
+    
+        identity = get_jwt_identity()
+    review = Review(
+        user_id=identity['id'],
+        place_id=place_id,
+        text=data['text'],
+        rating=data['rating']
+    )
+    repo.add(review)
+    return jsonify(review.to_dict()), 201
