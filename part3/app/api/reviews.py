@@ -28,3 +28,10 @@ def create_review(place_id):
     )
     repo.add(review)
     return jsonify(review.to_dict()), 201
+
+    @reviews_bp.route('/places/<int:place_id>/reviews', methods=['GET'])
+def list_reviews(place_id):
+    reviews = repo.list()
+    place_reviews = [r.to_dict() for r in reviews if r.place_id == place_id]
+    return jsonify(place_reviews), 200
+
