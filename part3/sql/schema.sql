@@ -1,0 +1,1 @@
+-- SQL schema for tables for users, places, reviews, amenities, and place_amenity
