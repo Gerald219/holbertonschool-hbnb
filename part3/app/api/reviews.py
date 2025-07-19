@@ -35,3 +35,10 @@ def list_reviews(place_id):
     place_reviews = [r.to_dict() for r in reviews if r.place_id == place_id]
     return jsonify(place_reviews), 200
 
+    @reviews_bp.route('/reviews/<int:review_id>', methods=['GET'])
+def get_review(review_id):
+    review = repo.get(review_id)
+    if not review:
+        return jsonify({'message': 'Review not found'}), 404
+    return jsonify(review.to_dict()), 200
+
