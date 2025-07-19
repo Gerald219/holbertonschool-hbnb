@@ -14,4 +14,12 @@ class Place(BaseModel):
     price_by_night = db.Column(db.Integer, default=0)
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
-
+    
+    reviews = db.relationship('Review', backref='place', lazy=True)
+    
+    amenities = db.relationship(
+        'Amenity',
+        secondary='place_amenity',
+        backref='places',
+        lazy=True
+    )
