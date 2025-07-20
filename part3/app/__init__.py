@@ -13,5 +13,7 @@ def create_app(config_object=Config):
 
     
     init_api(app)
+    with app.app_context():
+        db.create_all()
 
     return app
