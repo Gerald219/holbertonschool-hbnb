@@ -6,7 +6,7 @@ from business.facade import get_repository
 amenities_bp = Blueprint('amenities', __name__, url_prefix='/api/v1/amenities')
 repo = get_repository(Amenity)
 
-@amenities_bp.route('', methods=['POST'])
+@amenities_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_amenity():
     identity = get_jwt_identity()
@@ -20,7 +20,7 @@ def create_amenity():
     repo.add(amenity)
     return jsonify(amenity.to_dict()), 201
 
-@amenities_bp.route('', methods=['GET'])
+@amenities_bp.route('/', methods=['GET'])
 def list_amenities():
     return jsonify([a.to_dict() for a in repo.list()]), 200
 

@@ -1,5 +1,6 @@
 from business.base_model import BaseModel
 from app.extensions import db
+from business.place_amenity import place_amenity
 
 class Place(BaseModel):
     __tablename__ = 'places'
@@ -14,12 +15,11 @@ class Place(BaseModel):
     price_by_night = db.Column(db.Integer, default=0)
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
-    
+
     reviews = db.relationship('Review', backref='place', lazy=True)
-    
     amenities = db.relationship(
         'Amenity',
-        secondary='place_amenity',
-        backref='places',
+        secondary=place_amenity,
+        back_populates='places',
         lazy=True
     )
