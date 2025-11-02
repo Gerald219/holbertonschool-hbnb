@@ -1,6 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from part3.persistence.repository import InMemoryRepository
+from part3.persistence.user_storage import repo
 from part3.business.user import User as DomainUser
 
 api = Namespace("users", description="User operations")
@@ -31,7 +31,6 @@ user_update = api.model("UserUpdate", {
     "password":    fields.String(required=False),
 })
 
-repo = InMemoryRepository()
 
 @api.route("/")
 class UserList(Resource):

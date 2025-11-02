@@ -1,6 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from part3.persistence.repository import InMemoryRepository
+from part3.persistence.user_storage import repo
 
 api = Namespace('amenities', description='Amenity operations')
 
@@ -11,7 +11,6 @@ amenity_model = api.model('Amenity', {
     'updated_at': fields.String(readonly=True)
 })
 
-repo = InMemoryRepository()
 
 @api.route('/')
 class AmenityList(Resource):

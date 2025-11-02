@@ -1,9 +1,8 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from part3.persistence.repository import InMemoryRepository
+from part3.persistence.user_storage import repo
 
 api = Namespace('reviews', description='Review operations')
-repo = InMemoryRepository()
 
 review_model = api.model('Review', {
     'id': fields.String(readonly=True),
