@@ -16,3 +16,10 @@ login_input = api.model("LoginInput", {
 login_output = api.model("LoginOutput", {
     "access_token": fields.String,
 })
+
+@api.route("/login")
+class Login(Resource):
+    @api.expect(login_input, validate=True)
+    @api.marshal_with(login_output, code=200)
+    
+
