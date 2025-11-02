@@ -5,6 +5,8 @@ from part3.presentation.users import api as users_ns
 from part3.presentation.places import api as places_ns
 from part3.presentation.amenities import api as amenities_ns
 from part3.presentation.reviews import api as reviews_ns
+from part3.presentation.auth import api as auth_ns
+
 
 
 def create_app(config_object=DevConfig):
@@ -23,6 +25,7 @@ def create_app(config_object=DevConfig):
     api.add_namespace(places_ns, path="/places")
     api.add_namespace(amenities_ns, path="/amenities")
     api.add_namespace(reviews_ns, path="/reviews")
+    api.add_namespace(auth_ns, path="/auth")
 
     @app.route("/", endpoint="healthcheck")
     def home():
