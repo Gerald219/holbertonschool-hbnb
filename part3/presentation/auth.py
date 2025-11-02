@@ -32,9 +32,14 @@ class Login(Resource):
         if not match:
             api.abort(401, "Invalid credentials")
         
-        #  rebuild domain user to check hashed password
+        #  rebuild domain user - check hashed password
         du = DomainUser(**match)
         if not du.check_password(password):
             api.abort(401, "Invalid credentials")
         
-        
+        #  build token claims
+        claims = {"is_admin": bool(match.get("is_admin", False))}
+
+        #  identity is the user id
+        token = create_access_token(identity=match["id"], additional_claims=claims)
+        return {"access_token": token}, 200
