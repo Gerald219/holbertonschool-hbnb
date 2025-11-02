@@ -1,6 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from persistence.repository import InMemoryRepository
+from part3.persistence.repository import InMemoryRepository
 
 api = Namespace('amenities', description='Amenity operations')
 
