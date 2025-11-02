@@ -26,3 +26,15 @@ class Login(Resource):
         email = data.get("email")
         password = data.get("password")
 
+        #  find user by email (scan-in-memory store)
+        users = repo.get_all("users") or []
+        match = next((u for u in users if u.get("email") == email), None)
+        if not match:
+            api.abort(401, "Invalid credentials")
+        
+        #  rebuild domain user to check hashed password
+        du = DomainUser(**match)
+        if not du.check_password(password):
+            api.abort(401, "Invalid credentials")
+        
+        
