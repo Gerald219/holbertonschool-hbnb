@@ -21,5 +21,8 @@ login_output = api.model("LoginOutput", {
 class Login(Resource):
     @api.expect(login_input, validate=True)
     @api.marshal_with(login_output, code=200)
-    
+    def post(self):
+        data = request.get_json(force=True) or {}
+        email = data.get("email")
+        password = data.get("password")
 
