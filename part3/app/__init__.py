@@ -37,6 +37,10 @@ def create_app(config_object=DevConfig):
     @app.errorhandler(NoAuthorizationError)
     def _no_auth_header(e):
         return jsonify(message="Missing Authorization header"), 401
+    
+    @api.errorhandler(NoAuthorizationError)
+    def _restx_no_auth(e):
+        return {"message": "Missing or invalid Authorization header"}, 401
 
     # register existing namespaces from Part2
     api.add_namespace(users_ns, path="/users")
