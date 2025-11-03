@@ -8,6 +8,8 @@ from part3.presentation.reviews import api as reviews_ns
 from part3.presentation.auth import api as auth_ns
 from flask import jsonify
 from flask_jwt_extended.exceptions import NoAuthorizationError
+from flask_jwt_extended.exceptions import JWTExtendedException
+from jwt.exceptions import InvalidTokenError
 
 
 def create_app(config_object=DevConfig):
@@ -41,6 +43,23 @@ def create_app(config_object=DevConfig):
     @api.errorhandler(NoAuthorizationError)
     def _restx_no_auth(e):
         return {"message": "Missing or invalid Authorization header"}, 401
+    
+    @api.errorhandler(JWTExtendedException)
+    def _restx_jwt_errors(e):
+        return {"message": "Invalid token"}, 422
+    
+    @app.errorhandler(JWTExtendedException)
+    def _jwt_all(e):
+        return jsonify(message="Invalid token"), 422
+
+    @api.errorhandler(InvalidTokenError)
+    def _restx_invalid_token(e):
+        return {"message": "Invalid token"}, 422
+
+    @app.errorhandler(InvalidTokenError)
+    def _app_invalid_token(e):
+        return jsonify(message="Invalid token"), 422
+
 
     # register existing namespaces from Part2
     api.add_namespace(users_ns, path="/users")
