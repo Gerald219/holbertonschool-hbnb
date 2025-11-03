@@ -8,4 +8,4 @@ db = SQLAlchemy()  # database ORM
 migrate = Migrate()  # migrations
 bcrypt = Bcrypt()  # password hashing
 jwt = JWTManager() # JWT auth tokens
-api = Api(title="HBnB API", version="3.0", doc="/docs")  # Swagger at /docs
+api = Api(title="HBnB API", version="3.0", doc="/docs", prefix="/api/v1") # Swagger at /docs
