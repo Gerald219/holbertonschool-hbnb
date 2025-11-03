@@ -6,13 +6,15 @@ from part3.presentation.places import api as places_ns
 from part3.presentation.amenities import api as amenities_ns
 from part3.presentation.reviews import api as reviews_ns
 from part3.presentation.auth import api as auth_ns
-
+from flask import jsonify
+from flask_jwt_extended.exceptions import NoAuthorizationError
 
 
 def create_app(config_object=DevConfig):
     app = Flask(__name__)
     app.config.from_object(config_object)  # Load config settings
 
+    
     # plug in tools
     db.init_app(app)
     migrate.init_app(app, db)
@@ -20,7 +22,23 @@ def create_app(config_object=DevConfig):
     jwt.init_app(app)
     api.init_app(app)
 
-    # register existing namespaces from Part 2
+    @jwt.unauthorized_loader
+    def _jwt_unauthorized(reason):
+        return jsonify(message="Missing or invalid Authorization header"), 401
+
+    @jwt.invalid_token_loader
+    def _jwt_invalid(reason):
+        return jsonify(message="Invalid token"), 422
+
+    @jwt.expired_token_loader
+    def _jwt_expired(jwt_header, jwt_payload):
+        return jsonify(message="Token has expired"), 401
+
+    @app.errorhandler(NoAuthorizationError)
+    def _no_auth_header(e):
+        return jsonify(message="Missing Authorization header"), 401
+
+    # register existing namespaces from Part2
     api.add_namespace(users_ns, path="/users")
     api.add_namespace(places_ns, path="/places")
     api.add_namespace(amenities_ns, path="/amenities")
