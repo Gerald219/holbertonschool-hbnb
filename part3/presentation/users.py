@@ -64,25 +64,37 @@ class UserList(Resource):
         return created, 201
 
 
-@api.route("/<string:user_id>")
-@api.param("user_id", "The user ID")
-class UserItem(Resource):
-    @api.marshal_with(user_output, code=200)
-    def get(self, user_id):
-        user = repo.get("users", user_id)
-        if not user:
-            api.abort(404, "User not found")
-        return user
+@jwt_required()
+@api.expect(user_update, validate=True)
+@api.marshal_with(user_output, code=200)
+def put(self, user_id):
+    current_user = get_jwt_identity()
+    is_admin = bool(get_jwt().get("is_admin", False))
 
-    @api.expect(user_update, validate=True)
-    @api.marshal_with(user_output, code=200)
-    def put(self, user_id):
-        updates = request.json or {}
-        updates.pop("password", None)  # plain password not accepted here
-        updated_user = repo.update("users", user_id, updates)
-        if not updated_user:
-            api.abort(404, "User not found")
-        return updated_user
+    if (current_user != user_id) and (not is_admin):
+        api.abort(403, "You can only update your own profile (or be an admin).")
 
-    def delete(self, user_id):
-        api.abort(405, "DELETE not supported for users in Part 3")
+    # block dangerous fields
+    updates = request.get_json(force=True) or {}
+    for k in ("id", "is_admin", "password", "password_hash", "created_at", "updated_at"):
+        updates.pop(k, None)
+
+    updated_user = repo.update("users", user_id, updates)
+    if not updated_user:
+        api.abort(404, "User not found")
+    return updated_user
+
+
+@jwt_required()
+@api.response(204, "Deleted")
+def delete(self, user_id):
+    current_user = get_jwt_identity()
+    is_admin = bool(get_jwt().get("is_admin", False))
+
+    if (current_user != user_id) and (not is_admin):
+        api.abort(403, "You can only delete your own account (or be an admin).")
+
+    deleted = repo.delete("users", user_id)
+    if not deleted:
+        api.abort(404, "User not found")
+    return "", 204
