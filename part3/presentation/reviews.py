@@ -108,8 +108,10 @@ class Review(Resource):
         if not existing:
             api.abort(404, "Review not found")
 
-        if existing.get("user_id") != current_user:
-            api.abort(403, "You can only delete your own review")
+        claims = get_jwt()
+        is_admin = bool(claims.get("is_admin", False))
+        if not is_admin and existing.get("user_id") != current_user:
+            api.abort(403, "Only the author (or admin) can delete this review")
 
         deleted = repo.delete("reviews", review_id)
         if not deleted:
