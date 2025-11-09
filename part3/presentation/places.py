@@ -100,7 +100,7 @@ class PlaceAmenity(Resource):
         if not amenity:
             api.abort(404, "Amenity not found")
 
-        #  permission: owner or admin
+        #  permissionn owner or admin
         user_id = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
         if place.get("owner_id") != user_id and not is_admin:
@@ -112,4 +112,30 @@ class PlaceAmenity(Resource):
             api.abort(409, "Amenity already attached")
 
         updated = repo.update("places", place_id, {"amenity_ids": ids + [amenity_id]})
+        return updated, 200
+
+    @jwt_required()
+    @api.marshal_with(place_output, code=200)
+    def delete(self, place_id, amenity_id):
+        #  make sure both exist
+        place = repo.get("places", place_id)
+        if not place:
+            api.abort(404, "Place not found")
+        amenity = repo.get("amenities", amenity_id)
+        if not amenity:
+            api.abort(404, "Amenity not found")
+
+        #  permission: owner or admin
+        user_id = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
+        if place.get("owner_id") != user_id and not is_admin:
+            api.abort(403, "Only the owner or an admin can change amenities for this place")
+
+        #  must be attached to remove it
+        ids = place.get("amenity_ids") or []
+        if amenity_id not in ids:
+            api.abort(404, "Amenity not attached to this place")
+
+        new_ids = [i for i in ids if i != amenity_id]
+        updated = repo.update("places", place_id, {"amenity_ids": new_ids})
         return updated, 200
