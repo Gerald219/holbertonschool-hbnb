@@ -20,9 +20,14 @@ class AmenityList(Resource):
     def get(self):
         return repo.get_all("amenities")
 
+    @jwt_required()
     @api.expect(amenity_model)
     @api.marshal_with(amenity_model, code=201)
     def post(self):
+        claims = get_jwt()
+        if not bool(claims.get("is_admin", False)):
+            api.abort(403, "Admin only: you must be an admin to create amenities")
+
         data = request.json
         return repo.save("amenities", data), 201
 
