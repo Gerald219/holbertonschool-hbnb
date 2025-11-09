@@ -1,8 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from part3.persistence.user_storage import repo
 from flask_restx import fields
+
+
 
 api = Namespace("places", description="Place operations")
 
@@ -73,9 +75,12 @@ class Place(Resource):
         if not place:
             api.abort(404, "Place not found")
 
+        claims = get_jwt()
+        is_admin = bool(claims.get("is_admin", False))
         current_user = get_jwt_identity()
-        if place.get("owner_id") != current_user:
-            api.abort(403, "You can only edit your own place")
+
+        if not is_admin and place.get("owner_id") != current_user:
+            api.abort(403, "Only the owner (or admin) can update this place")
 
         updates = request.get_json(force=True) or {}
         updates.pop("owner_id", None)  # prevent ownership change
