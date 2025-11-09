@@ -27,7 +27,6 @@ class AmenityList(Resource):
         claims = get_jwt()
         if not bool(claims.get("is_admin", False)):
             api.abort(403, "Admin only: you must be an admin to create amenities")
-
         data = request.get_json(force=True) or {}
         return repo.save("amenities", data), 201
 
@@ -49,9 +48,19 @@ class Amenity(Resource):
         claims = get_jwt()
         if not bool(claims.get("is_admin", False)):
             api.abort(403, "Admin only: you must be an admin to update amenities")
-
         updates = request.json or {}
         updated = repo.update("amenities", amenity_id, updates)
         if not updated:
             api.abort(404, "Amenity not found")
         return updated
+
+    @jwt_required()
+    @api.response(204, 'Deleted')
+    def delete(self, amenity_id):
+        claims = get_jwt()
+        if not bool(claims.get("is_admin", False)):
+            api.abort(403, "Admin only: you must be an admin to delete amenities")
+        deleted = repo.delete("amenities", amenity_id)
+        if not deleted:
+            api.abort(404, "Amenity not found")
+        return '', 204
