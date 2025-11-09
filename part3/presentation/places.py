@@ -47,13 +47,15 @@ class PlaceList(Resource):
         return repo.get_all("places")
 
     @jwt_required()
-    @api.expect(place_input, validate=True)        # client does NOT send owner_id
-    @api.marshal_with(place_output, code=201)      # server returns owner_id
+    @api.expect(place_input, validate=True)
+    @api.marshal_with(place_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
-        data["owner_id"] = get_jwt_identity()      # stamp owner from JWT
+        data["owner_id"] = get_jwt_identity()
+        data.setdefault("amenity_ids", [])
         created = repo.save("places", data)
         return created, 201
+
 
 @api.route("/<string:place_id>")
 @api.param("place_id", "The place ID")
