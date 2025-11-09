@@ -83,8 +83,10 @@ class Review(Resource):
             api.abort(404, "Review not found")
 
         # only author can edit
-        if existing.get("user_id") != current_user:
-            api.abort(403, "You can only edit your own review")
+        claims = get_jwt()
+        is_admin = bool(claims.get("is_admin", False))
+        if not is_admin and existing.get("user_id") != current_user:
+            api.abort(403, "Only the author (or admin) can edit this review")
 
         updates = request.json or {}
         # restrict to text only
