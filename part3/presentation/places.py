@@ -2,8 +2,6 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from part3.persistence.user_storage import repo
-from flask_restx import fields
-
 
 
 api = Namespace("places", description="Place operations")
@@ -85,4 +83,33 @@ class Place(Resource):
         updates = request.get_json(force=True) or {}
         updates.pop("owner_id", None)  # prevent ownership change
         updated = repo.update("places", place_id, updates)
+        return updated, 200
+
+@api.route("/<string:place_id>/amenities/<string:amenity_id>")
+@api.param("place_id", "The place ID")
+@api.param("amenity_id", "The amenity ID")
+class PlaceAmenity(Resource):
+    @jwt_required()
+    @api.marshal_with(place_output, code=200)
+    def post(self, place_id, amenity_id):
+        #  make sure both exist
+        place = repo.get("places", place_id)
+        if not place:
+            api.abort(404, "Place not found")
+        amenity = repo.get("amenities", amenity_id)
+        if not amenity:
+            api.abort(404, "Amenity not found")
+
+        #  permission: owner or admin
+        user_id = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
+        if place.get("owner_id") != user_id and not is_admin:
+            api.abort(403, "Only the owner or an admin can modify amenities for this place")
+
+        #  prevent duplicates, then save
+        ids = place.get("amenity_ids") or []
+        if amenity_id in ids:
+            api.abort(409, "Amenity already attached")
+
+        updated = repo.update("places", place_id, {"amenity_ids": ids + [amenity_id]})
         return updated, 200
