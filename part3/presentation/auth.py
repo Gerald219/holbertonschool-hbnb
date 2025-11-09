@@ -3,6 +3,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import create_access_token
 from part3.persistence.user_storage import repo
 from part3.business.user import User as DomainUser
+import os
 
 
 api = Namespace("auth", description="Authentication", path="/auth")
@@ -36,9 +37,17 @@ class Login(Resource):
         if not du.check_password(password):
             api.abort(401, "Invalid credentials")
         
-        #  build token claims
-        claims = {"is_admin": bool(match.get("is_admin", False))}
+        # build token claims from env guest list (VIP emails)
+        admin_emails = {
+            e.strip().lower()
+            for e in os.getenv("ADMIN_EMAILS", "").split(",")
+            if e.strip()
+        }
+        is_admin = bool(match.get("is_admin", False)) or (email and email.lower() in admin_emails)
 
-        #  identity is the user id
-        token = create_access_token(identity=match["id"], additional_claims=claims)
+        # identity is the user id + is_admin flag in token
+        token = create_access_token(
+            identity=match["id"],
+            additional_claims={"is_admin": bool(is_admin)}
+        )
         return {"access_token": token}, 200
