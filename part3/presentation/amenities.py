@@ -41,10 +41,15 @@ class Amenity(Resource):
             api.abort(404, "Amenity not found")
         return amenity
 
-    @api.expect(amenity_model)
+    @jwt_required()
+    @api.expect(amenity_model, validate=True)
     @api.marshal_with(amenity_model)
     def put(self, amenity_id):
-        updates = request.json
+        claims = get_jwt()
+        if not bool(claims.get("is_admin", False)):
+            api.abort(403, "Admin only: you must be an admin to update amenities")
+
+        updates = request.json or {}
         updated = repo.update("amenities", amenity_id, updates)
         if not updated:
             api.abort(404, "Amenity not found")
