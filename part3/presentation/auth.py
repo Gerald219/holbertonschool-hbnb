@@ -37,7 +37,7 @@ class Login(Resource):
         if not du.check_password(password):
             api.abort(401, "Invalid credentials")
         
-        # build token claims from env guest list (VIP emails)
+        # build token claims from env guest listemails and is_admin flag
         admin_emails = {
             e.strip().lower()
             for e in os.getenv("ADMIN_EMAILS", "").split(",")
