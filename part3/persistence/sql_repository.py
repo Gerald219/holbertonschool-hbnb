@@ -1,10 +1,8 @@
 from __future__ import annotations
-from typing import Dict, Any, List, Optional
-
+from typing import Any, Dict, List, Optional
 from sqlalchemy.exc import IntegrityError
 from part3.app.extensions import db, bcrypt
 from part3.models import User
-
 
 def _to_dict(u: User) -> Dict[str, Any]:
     return {
@@ -16,16 +14,12 @@ def _to_dict(u: User) -> Dict[str, Any]:
         "updated_at": u.updated_at.isoformat() if u.updated_at else None,
     }
 
-
 def list_users() -> List[Dict[str, Any]]:
-    users = User.query.order_by(User.created_at.asc()).all()
-    return [_to_dict(u) for u in users]
-
+    return [_to_dict(u) for u in User.query.order_by(User.created_at.asc()).all()]
 
 def get_user(user_id: str) -> Optional[Dict[str, Any]]:
     u = db.session.get(User, user_id)
     return _to_dict(u) if u else None
-
 
 def create_user(payload: Dict[str, Any]) -> Dict[str, Any]:
     first = payload.get("first_name")
@@ -33,43 +27,38 @@ def create_user(payload: Dict[str, Any]) -> Dict[str, Any]:
     email = payload.get("email")
     pw    = payload.get("password")
     if not all([first, last, email, pw]):
-        raise ValueError("missing required fields: first_name, last_name, email, password")
+        raise ValueError("missing_fields")
 
-    hashed = bcrypt.generate_password_hash(pw).decode("utf-8")
 
-    
+    if User.query.filter_by(email=email).first():
+        raise ValueError("email_already_exists")
+
+
     u = User(first_name=first, last_name=last, email=email)
-    u.password_hash = hashed
+    u.password_hash = bcrypt.generate_password_hash(pw).decode("utf-8")
 
     db.session.add(u)
     try:
         db.session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
 
-        raise ValueError("email_already_exists")
-
+        raise ValueError("email_already_exists") from e
     return _to_dict(u)
-
 
 def update_user(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     u = db.session.get(User, user_id)
     if not u:
         return None
-
-    
-    for key in ("first_name", "last_name", "email"):
-        if key in updates and updates[key] is not None:
-            setattr(u, key, updates[key])
-
+    for k in ("first_name", "last_name", "email"):
+        if k in updates and updates[k] is not None:
+            setattr(u, k, updates[k])
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         raise ValueError("email_already_exists")
-
     return _to_dict(u)
-
 
 def delete_user(user_id: str) -> bool:
     u = db.session.get(User, user_id)
