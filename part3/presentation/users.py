@@ -25,10 +25,9 @@ user_output = api.model("UserOutput", {
 })
 
 user_update = api.model("UserUpdate", {
-    "first_name":  fields.String(required=False),
-    "last_name":   fields.String(required=False),
-    "email":       fields.String(required=False),
-    "password":    fields.String(required=False),
+    "first_name":  fields.String,
+    "last_name":   fields.String,
+    "email":       fields.String,
 })
 
 @api.route("/")
@@ -42,20 +41,19 @@ class UserList(Resource):
     def post(self):
         data = request.get_json(force=True) or {}
         try:
-            created = repo.create_user(data)
+            return repo.create_user(data), 201
         except ValueError as e:
             api.abort(400, str(e))
-        return created, 201
 
 @api.route("/<string:user_id>")
 @api.param("user_id", "The user ID")
 class UserItem(Resource):
     @api.marshal_with(user_output, code=200)
     def get(self, user_id):
-        user = repo.get_user(user_id)
-        if not user:
+        u = repo.get_user(user_id)
+        if not u:
             api.abort(404, "User not found")
-        return user
+        return u
 
     @jwt_required()
     @api.expect(user_update, validate=True)
@@ -65,17 +63,16 @@ class UserItem(Resource):
         is_admin = bool(get_jwt().get("is_admin", False))
         if (current_user != user_id) and (not is_admin):
             api.abort(403, "You can only update your own profile (or be an admin).")
-
         updates = request.get_json(force=True) or {}
-        for k in ("id", "is_admin", "password_hash", "created_at", "updated_at"):
+        for k in ("id", "password", "password_hash", "is_admin", "created_at", "updated_at"):
             updates.pop(k, None)
         try:
-            updated_user = repo.update_user(user_id, updates)
+            updated = repo.update_user(user_id, updates)
         except ValueError as e:
             api.abort(400, str(e))
-        if not updated_user:
+        if not updated:
             api.abort(404, "User not found")
-        return updated_user
+        return updated
 
     @jwt_required()
     @api.response(204, "Deleted")
@@ -84,8 +81,6 @@ class UserItem(Resource):
         is_admin = bool(get_jwt().get("is_admin", False))
         if (current_user != user_id) and (not is_admin):
             api.abort(403, "You can only delete your own account (or be an admin).")
-
-        deleted = repo.delete_user(user_id)
-        if not deleted:
+        if not repo.delete_user(user_id):
             api.abort(404, "User not found")
         return "", 204

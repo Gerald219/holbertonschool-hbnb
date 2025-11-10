@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError
 from part3.app.extensions import db, bcrypt
 from part3.models import User
 
-# ----- helpers -----
 def user_to_dict(u: User) -> Dict[str, Any]:
     return {
         "id": u.id,
@@ -15,7 +14,6 @@ def user_to_dict(u: User) -> Dict[str, Any]:
         "updated_at": u.updated_at.isoformat() if u.updated_at else None,
     }
 
-# ----- USERS (SQL) -----
 def list_users() -> List[Dict[str, Any]]:
     return [user_to_dict(u) for u in User.query.order_by(User.created_at.asc()).all()]
 
@@ -24,13 +22,10 @@ def get_user(user_id: str) -> Optional[Dict[str, Any]]:
     return user_to_dict(u) if u else None
 
 def create_user(payload: Dict[str, Any]) -> Dict[str, Any]:
-    first = payload.get("first_name")
-    last  = payload.get("last_name")
-    email = payload.get("email")
-    pw    = payload.get("password")
+    first = payload.get("first_name"); last  = payload.get("last_name")
+    email = payload.get("email");      pw    = payload.get("password")
     if not all([first, last, email, pw]):
         raise ValueError("Missing required fields: first_name, last_name, email, password")
-
     hashed = bcrypt.generate_password_hash(pw).decode("utf-8")
     u = User(first_name=first, last_name=last, email=email, password_hash=hashed)
     db.session.add(u)
