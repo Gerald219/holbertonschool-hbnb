@@ -3,30 +3,30 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from part3.persistence.user_storage import repo
 
-api = Namespace('reviews', description='Review operations')
+api = Namespace("reviews", description="Review operations")
 
-# Input from client (only allowed fields)
-review_input = api.model('ReviewInput', {
-    'text': fields.String(required=True),
-    'place_id': fields.String(required=True),
+# Client input for create
+review_input = api.model("ReviewInput", {
+    "text": fields.String(required=True),
+    "place_id": fields.String(required=True),
 })
 
-# Output shape returned to clients
-review_output = api.model('ReviewOutput', {
-    'id': fields.String(readonly=True),
-    'text': fields.String,
-    'user_id': fields.String,      # set by server from JWT
-    'place_id': fields.String,
-    'created_at': fields.String(readonly=True),
-    'updated_at': fields.String(readonly=True),
+# Server output shape
+review_output = api.model("ReviewOutput", {
+    "id": fields.String(readonly=True),
+    "text": fields.String,
+    "user_id": fields.String,   # set from JWT
+    "place_id": fields.String,
+    "created_at": fields.String(readonly=True),
+    "updated_at": fields.String(readonly=True),
 })
 
-# Partial update (author can edit text)
-review_update = api.model('ReviewUpdate', {
-    'text': fields.String(required=True),
+# Partial update (author can edit text only)
+review_update = api.model("ReviewUpdate", {
+    "text": fields.String(required=True),
 })
 
-@api.route('/')
+@api.route("/")
 class ReviewList(Resource):
     @api.marshal_list_with(review_output)
     def get(self):
@@ -36,35 +36,30 @@ class ReviewList(Resource):
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
     def post(self):
-        data = request.json or {}
-        current_user = get_jwt_identity()
+        data = request.get_json(force=True) or {}
+        user_id = get_jwt_identity()
+        place_id = data["place_id"]
 
-        # validate place exists
-        place_id = data.get("place_id")
+        # place must exist
         place = repo.get("places", place_id)
         if not place:
             api.abort(404, "Place not found")
 
-        # no self-review(owner cannot review own place)
-        if place.get("owner_id") == current_user:
+        # no self-review
+        if place.get("owner_id") == user_id:
             api.abort(403, "You cannot review your own place")
 
         # one review per user per place
         for r in repo.get_all("reviews"):
-            if r.get("user_id") == current_user and r.get("place_id") == place_id:
+            if r.get("user_id") == user_id and r.get("place_id") == place_id:
                 api.abort(409, "You already reviewed this place")
 
-        # create review(server sets user_id)
-        review = {
-            "text": data["text"],
-            "place_id": place_id,
-            "user_id": current_user,
-        }
-        saved = repo.save("reviews", review)
-        return saved, 201
+        review = {"text": data["text"], "place_id": place_id, "user_id": user_id}
+        created = repo.save("reviews", review)
+        return created, 201
 
-@api.route('/<string:review_id>')
-@api.param('review_id', 'The review ID')
+@api.route("/<string:review_id>")
+@api.param("review_id", "The review ID")
 class Review(Resource):
     @api.marshal_with(review_output)
     def get(self, review_id):
@@ -75,45 +70,39 @@ class Review(Resource):
 
     @jwt_required()
     @api.expect(review_update, validate=True)
-    @api.marshal_with(review_output)
+    @api.marshal_with(review_output, code=200)
     def put(self, review_id):
-        current_user = get_jwt_identity()
-        existing = repo.get("reviews", review_id)
-        if not existing:
+        review = repo.get("reviews", review_id)
+        if not review:
             api.abort(404, "Review not found")
 
-        # only author can edit
-        claims = get_jwt()
-        is_admin = bool(claims.get("is_admin", False))
-        if not is_admin and existing.get("user_id") != current_user:
-            api.abort(403, "Only the author (or admin) can edit this review")
+        # AUTHOR-ONLY edit (admins cannot edit)
+        current_user = get_jwt_identity()
+        if review.get("user_id") != current_user:
+            api.abort(403, "Only the author can edit this review")
 
-        updates = request.json or {}
-        # restrict to text only
-        allowed = {"text"}
-        filtered = {k: v for k, v in updates.items() if k in allowed}
-        if "text" not in filtered:
+        text = request.get_json(force=True).get("text")
+        if text is None:
             api.abort(400, "Nothing to update")
 
-        updated = repo.update("reviews", review_id, filtered)
-        if not updated:
-            api.abort(404, "Review not found")
-        return updated
+        updated = repo.update("reviews", review_id, {"text": text})
+        return updated, 200
 
     @jwt_required()
-    @api.response(204, 'Deleted')
+    @api.response(204, "Deleted")
     def delete(self, review_id):
-        current_user = get_jwt_identity()
-        existing = repo.get("reviews", review_id)
-        if not existing:
+        review = repo.get("reviews", review_id)
+        if not review:
             api.abort(404, "Review not found")
 
-        claims = get_jwt()
-        is_admin = bool(claims.get("is_admin", False))
-        if not is_admin and existing.get("user_id") != current_user:
-            api.abort(403, "Only the author (or admin) can delete this review")
+        # Author OR admin can delete
+        current_user = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
+        if not (is_admin or review.get("user_id") == current_user):
+            api.abort(403, "Only the author or an admin can delete this review")
 
         deleted = repo.delete("reviews", review_id)
         if not deleted:
             api.abort(404, "Review not found")
-        return '', 204
+        return "", 204
+
