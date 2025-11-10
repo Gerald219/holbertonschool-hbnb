@@ -10,6 +10,7 @@ from flask import jsonify
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.exceptions import JWTExtendedException
 from jwt.exceptions import InvalidTokenError
+from part3.app.extensions import init_extensions
 
 
 def create_app(config_object=DevConfig):
@@ -17,12 +18,7 @@ def create_app(config_object=DevConfig):
     app.config.from_object(config_object)  # Load config settings
 
     
-    # plug in tools
-    db.init_app(app)
-    migrate.init_app(app, db)
-    bcrypt.init_app(app)
-    jwt.init_app(app)
-    api.init_app(app)
+    init_extensions(app)  # Initialize extensions with the app -Yay!
 
     @jwt.unauthorized_loader
     def _jwt_unauthorized(reason):
