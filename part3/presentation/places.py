@@ -3,7 +3,6 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from part3.persistence.user_storage import repo
 
-
 api = Namespace("places", description="Place operations")
 
 # Input schema: what client sends
@@ -25,19 +24,19 @@ place_output = api.model("PlaceOutput", {
     "price_per_night": fields.Integer,
     "latitude": fields.Float,
     "longitude": fields.Float,
-    "owner_id": fields.String,  # set by server from JWT
+    "owner_id": fields.String, # set by server from JWT
     "amenity_ids": fields.List(fields.String),
     "created_at": fields.String(readonly=True),
     "updated_at": fields.String(readonly=True),
 })
 
-place_update = api.model('PlaceUpdate', {
-    'name': fields.String,
-    'city': fields.String,
-    'price_per_night': fields.Integer,
-    'description': fields.String,
-    'latitude': fields.Float,
-    'longitude': fields.Float,
+place_update = api.model("PlaceUpdate", {
+    "name": fields.String,
+    "city": fields.String,
+    "price_per_night": fields.Integer,
+    "description": fields.String,
+    "latitude": fields.Float,
+    "longitude": fields.Float,
 })
 
 @api.route("/")
@@ -47,15 +46,14 @@ class PlaceList(Resource):
         return repo.get_all("places")
 
     @jwt_required()
-    @api.expect(place_input, validate=True)
-    @api.marshal_with(place_output, code=201)
+    @api.expect(place_input, validate=True)  # client does NOT send owner_id
+    @api.marshal_with(place_output, code=201)  # server returns owner_id
     def post(self):
         data = request.get_json(force=True) or {}
-        data["owner_id"] = get_jwt_identity()
-        data.setdefault("amenity_ids", [])
+        data["owner_id"] = get_jwt_identity()  # stamp owner from JWT
+        data.setdefault("amenity_ids", [])  # ensure list exists
         created = repo.save("places", data)
         return created, 201
-
 
 @api.route("/<string:place_id>")
 @api.param("place_id", "The place ID")
@@ -94,7 +92,7 @@ class PlaceAmenity(Resource):
     @jwt_required()
     @api.marshal_with(place_output, code=200)
     def post(self, place_id, amenity_id):
-        #  make sure both exist
+        # make sure both exist
         place = repo.get("places", place_id)
         if not place:
             api.abort(404, "Place not found")
@@ -102,24 +100,25 @@ class PlaceAmenity(Resource):
         if not amenity:
             api.abort(404, "Amenity not found")
 
-        #  permissionn owner or admin
+        # permission:: owner or admin
         user_id = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
         if place.get("owner_id") != user_id and not is_admin:
             api.abort(403, "Only the owner or an admin can modify amenities for this place")
 
-        #  prevent duplicates, then save
+        # prevent duplicates, then save
         ids = place.get("amenity_ids") or []
         if amenity_id in ids:
             api.abort(409, "Amenity already attached")
 
-        updated = repo.update("places", place_id, {"amenity_ids": ids + [amenity_id]})
+        new_ids = ids + [amenity_id]
+        updated = repo.update("places", place_id, {"amenity_ids": new_ids})
         return updated, 200
 
     @jwt_required()
     @api.marshal_with(place_output, code=200)
     def delete(self, place_id, amenity_id):
-        #  make sure both exist
+        # make sure both exist
         place = repo.get("places", place_id)
         if not place:
             api.abort(404, "Place not found")
@@ -127,13 +126,13 @@ class PlaceAmenity(Resource):
         if not amenity:
             api.abort(404, "Amenity not found")
 
-        #  permission: owner or admin
+        # permission 
         user_id = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
         if place.get("owner_id") != user_id and not is_admin:
             api.abort(403, "Only the owner or an admin can change amenities for this place")
 
-        #  must be attached to remove it
+        # must be attached to remove it
         ids = place.get("amenity_ids") or []
         if amenity_id not in ids:
             api.abort(404, "Amenity not attached to this place")
