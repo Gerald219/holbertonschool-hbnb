@@ -11,7 +11,7 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from flask_jwt_extended.exceptions import JWTExtendedException
 from jwt.exceptions import InvalidTokenError
 from part3.app.extensions import init_extensions
-
+from part3 import models
 
 def create_app(config_object=DevConfig):
     app = Flask(__name__)
