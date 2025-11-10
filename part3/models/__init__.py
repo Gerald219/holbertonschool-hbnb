@@ -1,0 +1,79 @@
+from uuid import uuid4
+from datetime import datetime
+from part3.app.extensions import db
+
+def _uuid() -> str:
+    return str(uuid4())
+
+def _utcnow() -> datetime:
+    return datetime.utcnow()
+
+# Association table: Place <-> Amenity many-to-many relationship
+place_amenities = db.Table(
+    "place_amenities",
+    db.Column("place_id", db.String, db.ForeignKey("places.id"), primary_key=True),
+    db.Column("amenity_id", db.String, db.ForeignKey("amenities.id"), primary_key=True),
+)
+
+class TimestampMixin(db.Model):
+    __abstract__ = True
+    created_at = db.Column(db.DateTime, default=_utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+class User(TimestampMixin):
+    __tablename__ = "users"
+
+    id = db.Column(db.String, primary_key=True, default=_uuid)
+    first_name = db.Column(db.String, nullable=False)
+    last_name = db.Column(db.String, nullable=False)
+    email = db.Column(db.String, unique=True, index=True, nullable=False)
+    password_hash = db.Column(db.String, nullable=False)
+
+    places = db.relationship("Place", back_populates="owner", cascade="all, delete-orphan")
+    reviews = db.relationship("Review", back_populates="author", cascade="all, delete-orphan")
+
+class Place(TimestampMixin):
+    __tablename__ = "places"
+
+    id = db.Column(db.String, primary_key=True, default=_uuid)
+    name = db.Column(db.String, nullable=False)
+    city = db.Column(db.String, nullable=False)
+    price_per_night = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.Text)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+
+    owner_id = db.Column(db.String, db.ForeignKey("users.id"), nullable=False)
+    owner = db.relationship("User", back_populates="places")
+
+    amenities = db.relationship(
+        "Amenity",
+        secondary=place_amenities,
+        back_populates="places",
+    )
+
+    reviews = db.relationship("Review", back_populates="place", cascade="all, delete-orphan")
+
+class Amenity(TimestampMixin):
+    __tablename__ = "amenities"
+
+    id = db.Column(db.String, primary_key=True, default=_uuid)
+    name = db.Column(db.String, unique=True, nullable=False)
+
+    places = db.relationship(
+        "Place",
+        secondary=place_amenities,
+        back_populates="amenities",
+    )
+
+class Review(TimestampMixin):
+    __tablename__ = "reviews"
+
+    id = db.Column(db.String, primary_key=True, default=_uuid)
+    text = db.Column(db.Text, nullable=False)
+
+    user_id = db.Column(db.String, db.ForeignKey("users.id"), nullable=False)
+    place_id = db.Column(db.String, db.ForeignKey("places.id"), nullable=False)
+
+    author = db.relationship("User", back_populates="reviews")
+    place = db.relationship("Place", back_populates="reviews")
