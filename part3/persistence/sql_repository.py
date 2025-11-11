@@ -1,13 +1,12 @@
-# part3/persistence/sql_repository.py
 from __future__ import annotations
-from typing import Dict, Any, List, Optional
-from sqlalchemy import select
+from typing import Dict, Any, Optional, List
+
 from sqlalchemy.exc import IntegrityError
 from part3.app.extensions import db, bcrypt
 from part3.models import User
 
 
-def user_to_dict(u: User) -> Dict[str, Any]:
+def _to_dict(u: User) -> Dict[str, Any]:
     return {
         "id": u.id,
         "first_name": u.first_name,
@@ -18,69 +17,63 @@ def user_to_dict(u: User) -> Dict[str, Any]:
     }
 
 
+# ---------- READ ----------
 def list_users() -> List[Dict[str, Any]]:
-    rows = db.session.execute(select(User).order_by(User.created_at.asc())).scalars().all()
-    return [user_to_dict(u) for u in rows]
+    users = User.query.order_by(User.created_at.asc()).all()
+    return [_to_dict(u) for u in users]
+
 
 def get_user(user_id: str) -> Optional[Dict[str, Any]]:
     u = db.session.get(User, user_id)
-    return user_to_dict(u) if u else None
-
-def get_user_row_by_email(email: str) -> Optional[User]:
-    return db.session.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    return _to_dict(u) if u else None
 
 
 def create_user(payload: Dict[str, Any]) -> Dict[str, Any]:
-    first = payload.get("first_name")
-    last  = payload.get("last_name")
-    email = payload.get("email")
+    first = (payload.get("first_name") or "").strip()
+    last  = (payload.get("last_name") or "").strip()
+    email = (payload.get("email") or "").strip()
     pw    = payload.get("password")
 
-    if not all([first, last, email, pw]):
-        raise ValueError("missing_fields")
+    if not first or not last or not email or not pw:
+        raise ValueError("missing_required_fields")
 
-    
-    if get_user_row_by_email(email):
-        raise ValueError("email_already_exists")
 
-    hashed = bcrypt.generate_password_hash(pw).decode("utf-8")
     u = User(first_name=first, last_name=last, email=email)
-    u.password_hash = hashed
+    u.password_hash = bcrypt.generate_password_hash(pw).decode("utf-8")
 
     db.session.add(u)
     try:
         db.session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
-        # unique index fallback
-        raise ValueError("email_already_exists")
+        # Only map to duplicate email if the DB says so
+        text = str(getattr(e, "orig", e)).lower()
+        if "unique" in text and "email" in text:
+            raise ValueError("email_already_exists")
+        # otherwise let the caller surface a generic 500/400
+        raise
 
-    return user_to_dict(u)
+    return _to_dict(u)
 
 def update_user(user_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     u = db.session.get(User, user_id)
     if not u:
         return None
 
-    
-    first = updates.get("first_name", u.first_name)
-    last  = updates.get("last_name",  u.last_name)
-    email = updates.get("email",      u.email)
-
-    if email != u.email and get_user_row_by_email(email):
-        raise ValueError("email_already_exists")
-
-    u.first_name = first
-    u.last_name  = last
-    u.email      = email
+    for key in ("first_name", "last_name", "email"):
+        if key in updates and updates[key] is not None:
+            setattr(u, key, updates[key])
 
     try:
         db.session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
-        raise ValueError("email_already_exists")
+        text = str(getattr(e, "orig", e)).lower()
+        if "unique" in text and "email" in text:
+            raise ValueError("email_already_exists")
+        raise
 
-    return user_to_dict(u)
+    return _to_dict(u)
 
 def delete_user(user_id: str) -> bool:
     u = db.session.get(User, user_id)
