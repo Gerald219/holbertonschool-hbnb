@@ -42,12 +42,11 @@ class UserList(Resource):
             created = repo.create_user(data)
         except ValueError as e:
             msg = str(e)
-            if msg == "email_already_exists":
-                api.abort(400, "email_already_exists")
-            elif msg == "missing_fields":
-                api.abort(400, "missing_fields")
+            if msg in ("email_already_exists", "missing_required_fields"):
+                api.abort(400, msg)
             api.abort(400, msg)
         return created, 201
+
 
 @api.route("/<string:user_id>")
 @api.param("user_id", "The user ID")
@@ -69,7 +68,6 @@ class UserItem(Resource):
             api.abort(403, "You can only update your own profile (or be an admin).")
 
         updates = request.get_json(force=True) or {}
-        
         for bad in ("id", "password", "password_hash", "created_at", "updated_at", "is_admin"):
             updates.pop(bad, None)
 

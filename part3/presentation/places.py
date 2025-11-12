@@ -1,11 +1,10 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from part3.persistence.user_storage import repo
+from part3.persistence import sql_place_repository as repo  # <-- DB repo
 
 api = Namespace("places", description="Place operations")
 
-# Input schema: what client sends
 place_input = api.model("PlaceInput", {
     "name": fields.String(required=True),
     "city": fields.String(required=True),
@@ -15,7 +14,6 @@ place_input = api.model("PlaceInput", {
     "longitude": fields.Float,
 })
 
-# Output schema: what server returns
 place_output = api.model("PlaceOutput", {
     "id": fields.String(readonly=True),
     "name": fields.String,
@@ -24,7 +22,7 @@ place_output = api.model("PlaceOutput", {
     "price_per_night": fields.Integer,
     "latitude": fields.Float,
     "longitude": fields.Float,
-    "owner_id": fields.String, # set by server from JWT
+    "owner_id": fields.String,
     "amenity_ids": fields.List(fields.String),
     "created_at": fields.String(readonly=True),
     "updated_at": fields.String(readonly=True),
@@ -43,16 +41,15 @@ place_update = api.model("PlaceUpdate", {
 class PlaceList(Resource):
     @api.marshal_list_with(place_output)
     def get(self):
-        return repo.get_all("places")
+        return repo.list_places()
 
     @jwt_required()
-    @api.expect(place_input, validate=True)  # client does NOT send owner_id
-    @api.marshal_with(place_output, code=201)  # server returns owner_id
+    @api.expect(place_input, validate=True)
+    @api.marshal_with(place_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
-        data["owner_id"] = get_jwt_identity()  # stamp owner from JWT
-        data.setdefault("amenity_ids", [])  # ensure list exists
-        created = repo.save("places", data)
+        data["owner_id"] = get_jwt_identity()
+        created = repo.create_place(data)
         return created, 201
 
 @api.route("/<string:place_id>")
@@ -60,7 +57,7 @@ class PlaceList(Resource):
 class Place(Resource):
     @api.marshal_with(place_output)
     def get(self, place_id):
-        place = repo.get("places", place_id)
+        place = repo.get_place(place_id)
         if not place:
             api.abort(404, "Place not found")
         return place
@@ -69,20 +66,18 @@ class Place(Resource):
     @api.expect(place_update, validate=True)
     @api.marshal_with(place_output, code=200)
     def put(self, place_id):
-        place = repo.get("places", place_id)
-        if not place:
+        current_user = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
+
+        existing = repo.get_place(place_id)
+        if not existing:
             api.abort(404, "Place not found")
 
-        claims = get_jwt()
-        is_admin = bool(claims.get("is_admin", False))
-        current_user = get_jwt_identity()
-
-        if not is_admin and place.get("owner_id") != current_user:
+        if not is_admin and existing.get("owner_id") != current_user:
             api.abort(403, "Only the owner (or admin) can update this place")
 
         updates = request.get_json(force=True) or {}
-        updates.pop("owner_id", None)  # prevent ownership change
-        updated = repo.update("places", place_id, updates)
+        updated = repo.update_place(place_id, updates)
         return updated, 200
 
 @api.route("/<string:place_id>/amenities/<string:amenity_id>")
@@ -92,51 +87,35 @@ class PlaceAmenity(Resource):
     @jwt_required()
     @api.marshal_with(place_output, code=200)
     def post(self, place_id, amenity_id):
-        # make sure both exist
-        place = repo.get("places", place_id)
-        if not place:
-            api.abort(404, "Place not found")
-        amenity = repo.get("amenities", amenity_id)
-        if not amenity:
-            api.abort(404, "Amenity not found")
-
-        # permission:: owner or admin
-        user_id = get_jwt_identity()
+        current_user = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
-        if place.get("owner_id") != user_id and not is_admin:
+
+        existing = repo.get_place(place_id)
+        if not existing:
+            api.abort(404, "Place not found")
+
+        if (existing.get("owner_id") != current_user) and (not is_admin):
             api.abort(403, "Only the owner or an admin can modify amenities for this place")
 
-        # prevent duplicates, then save
-        ids = place.get("amenity_ids") or []
-        if amenity_id in ids:
-            api.abort(409, "Amenity already attached")
-
-        new_ids = ids + [amenity_id]
-        updated = repo.update("places", place_id, {"amenity_ids": new_ids})
+        updated = repo.attach_amenity(place_id, amenity_id)
+        if not updated:
+            api.abort(404, "Amenity or place not found")
         return updated, 200
 
     @jwt_required()
     @api.marshal_with(place_output, code=200)
     def delete(self, place_id, amenity_id):
-        # make sure both exist
-        place = repo.get("places", place_id)
-        if not place:
-            api.abort(404, "Place not found")
-        amenity = repo.get("amenities", amenity_id)
-        if not amenity:
-            api.abort(404, "Amenity not found")
-
-        # permission 
-        user_id = get_jwt_identity()
+        current_user = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
-        if place.get("owner_id") != user_id and not is_admin:
+
+        existing = repo.get_place(place_id)
+        if not existing:
+            api.abort(404, "Place not found")
+
+        if (existing.get("owner_id") != current_user) and (not is_admin):
             api.abort(403, "Only the owner or an admin can change amenities for this place")
 
-        # must be attached to remove it
-        ids = place.get("amenity_ids") or []
-        if amenity_id not in ids:
-            api.abort(404, "Amenity not attached to this place")
-
-        new_ids = [i for i in ids if i != amenity_id]
-        updated = repo.update("places", place_id, {"amenity_ids": new_ids})
+        updated = repo.detach_amenity(place_id, amenity_id)
+        if not updated:
+            api.abort(404, "Amenity or place not found")
         return updated, 200
