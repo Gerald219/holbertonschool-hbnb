@@ -1,27 +1,24 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from part3.persistence.user_storage import repo
+from part3.persistence import sql_review_repository as repo
 
 api = Namespace("reviews", description="Review operations")
 
-# Client input for create
 review_input = api.model("ReviewInput", {
     "text": fields.String(required=True),
     "place_id": fields.String(required=True),
 })
 
-# Server output shape
 review_output = api.model("ReviewOutput", {
     "id": fields.String(readonly=True),
     "text": fields.String,
-    "user_id": fields.String,   # set from JWT
+    "user_id": fields.String,
     "place_id": fields.String,
     "created_at": fields.String(readonly=True),
     "updated_at": fields.String(readonly=True),
 })
 
-# Partial update (author can edit text only)
 review_update = api.model("ReviewUpdate", {
     "text": fields.String(required=True),
 })
@@ -30,32 +27,31 @@ review_update = api.model("ReviewUpdate", {
 class ReviewList(Resource):
     @api.marshal_list_with(review_output)
     def get(self):
-        return repo.get_all("reviews")
+        return repo.list_reviews()
 
     @jwt_required()
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
-        user_id = get_jwt_identity()
-        place_id = data["place_id"]
-
-        # place must exist
-        place = repo.get("places", place_id)
-        if not place:
-            api.abort(404, "Place not found")
-
-        # no self-review
-        if place.get("owner_id") == user_id:
-            api.abort(403, "You cannot review your own place")
-
-        # one review per user per place
-        for r in repo.get_all("reviews"):
-            if r.get("user_id") == user_id and r.get("place_id") == place_id:
+        payload = {
+            "text": data.get("text"),
+            "place_id": data.get("place_id"),
+            "user_id": get_jwt_identity(),
+        }
+        try:
+            created = repo.create_review(payload)
+        except ValueError as e:
+            m = str(e)
+            if m == "missing_required_fields":
+                api.abort(400, m)
+            if m == "place_not_found":
+                api.abort(404, "Place not found")
+            if m == "self_review_forbidden":
+                api.abort(403, "You cannot review your own place")
+            if m == "duplicate_review":
                 api.abort(409, "You already reviewed this place")
-
-        review = {"text": data["text"], "place_id": place_id, "user_id": user_id}
-        created = repo.save("reviews", review)
+            api.abort(400, m)
         return created, 201
 
 @api.route("/<string:review_id>")
@@ -63,46 +59,40 @@ class ReviewList(Resource):
 class Review(Resource):
     @api.marshal_with(review_output)
     def get(self, review_id):
-        review = repo.get("reviews", review_id)
-        if not review:
+        r = repo.get_review(review_id)
+        if not r:
             api.abort(404, "Review not found")
-        return review
+        return r
 
     @jwt_required()
     @api.expect(review_update, validate=True)
     @api.marshal_with(review_output, code=200)
     def put(self, review_id):
-        review = repo.get("reviews", review_id)
-        if not review:
+        updates = request.get_json(force=True) or {}
+        try:
+            updated = repo.update_review(review_id, updates, actor_id=get_jwt_identity())
+        except ValueError as e:
+            m = str(e)
+            if m == "forbidden_not_author":
+                api.abort(403, "Only the author can edit this review")
+            if m == "nothing_to_update":
+                api.abort(400, "Nothing to update")
+            api.abort(400, m)
+        if not updated:
             api.abort(404, "Review not found")
-
-        # AUTHOR-ONLY edit (admins cannot edit)
-        current_user = get_jwt_identity()
-        if review.get("user_id") != current_user:
-            api.abort(403, "Only the author can edit this review")
-
-        text = request.get_json(force=True).get("text")
-        if text is None:
-            api.abort(400, "Nothing to update")
-
-        updated = repo.update("reviews", review_id, {"text": text})
         return updated, 200
 
     @jwt_required()
     @api.response(204, "Deleted")
     def delete(self, review_id):
-        review = repo.get("reviews", review_id)
-        if not review:
-            api.abort(404, "Review not found")
-
-        # Author OR admin can delete
-        current_user = get_jwt_identity()
-        is_admin = bool(get_jwt().get("is_admin", False))
-        if not (is_admin or review.get("user_id") == current_user):
-            api.abort(403, "Only the author or an admin can delete this review")
-
-        deleted = repo.delete("reviews", review_id)
-        if not deleted:
+        claims = get_jwt()
+        is_admin = bool(claims.get("is_admin", False))
+        try:
+            ok = repo.delete_review(review_id, actor_id=get_jwt_identity(), is_admin=is_admin)
+        except ValueError as e:
+            if str(e) == "forbidden_delete":
+                api.abort(403, "Only the author or an admin can delete this review")
+            api.abort(400, str(e))
+        if not ok:
             api.abort(404, "Review not found")
         return "", 204
-
