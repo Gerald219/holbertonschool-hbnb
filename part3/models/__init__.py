@@ -8,7 +8,7 @@ def _uuid() -> str:
 def _utcnow() -> datetime:
     return datetime.utcnow()
 
-# Association table for many-to-many relationship between Place and Amenity
+
 place_amenities = db.Table(
     "place_amenities",
     db.Column("place_id",  db.String(36), db.ForeignKey("places.id"), primary_key=True),
@@ -27,10 +27,10 @@ class User(TimestampMixin):
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, unique=True, index=True, nullable=False)
-    # stores the hashed password string
-    password = db.Column(db.String, nullable=False)
+    password_hash = db.Column(db.String, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
 
-    # Optional - reduces N+1 queries
+
     places  = db.relationship("Place",  back_populates="owner",  cascade="all, delete-orphan", lazy="selectin")
     reviews = db.relationship("Review", back_populates="author", cascade="all, delete-orphan", lazy="selectin")
 
