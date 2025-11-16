@@ -80,6 +80,28 @@ class Place(Resource):
         updated = repo.update_place(place_id, updates)
         return updated, 200
 
+    @jwt_required()
+    @api.response(204, "Deleted")
+    def delete(self, place_id):
+        current_user = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
+
+        # Check if the place exists
+        existing = repo.get_place(place_id)
+        if not existing:
+            api.abort(404, "Place not found")
+
+        # Check if user is owner or admin
+        if existing.get("owner_id") != current_user and not is_admin:
+            api.abort(403, "Only the owner or an admin can delete this place")
+
+        # Delete the place
+        deleted = repo.delete_place(place_id)
+        if not deleted:
+            api.abort(404, "Place not found")
+
+        return "", 204
+
 @api.route("/<string:place_id>/amenities/<string:amenity_id>")
 @api.param("place_id", "The place ID")
 @api.param("amenity_id", "The amenity ID")
@@ -119,3 +141,4 @@ class PlaceAmenity(Resource):
         if not updated:
             api.abort(404, "Amenity or place not found")
         return updated, 200
+
