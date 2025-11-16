@@ -1,11 +1,13 @@
-from persistence.repository import InMemoryRepository
+from persistence.sql_repository import SQLAlchemyRepository  # Import the SQLAlchemyRepository
 
 class Facade:
     def __init__(self):
-        self.repo = InMemoryRepository()
+        self.repo = SQLAlchemyRepository()  # Use the SQLAlchemy-based repository instead of InMemoryRepository
 
     def test_connection(self):
-        return self.repo.save("users", {
+        return self.repo.create_user({
             "first_name": "Test",
-            "email": "test@example.com"
+            "email": "test@example.com",
+            "password": "test1234"  # Make sure to include the password field as required
         })
+
