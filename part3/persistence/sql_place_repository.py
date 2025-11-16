@@ -27,6 +27,23 @@ def get_place(place_id: str) -> Optional[Dict[str, Any]]:
     return _to_dict(p) if p else None
 
 def create_place(payload: Dict[str, Any]) -> Dict[str, Any]:
+    # Validate price_per_night
+    if not payload.get("price_per_night") or not isinstance(
+        payload["price_per_night"], int
+    ) or payload["price_per_night"] <= 0:
+        raise ValueError("invalid_value: price_per_night")
+
+    # Validate latitude and longitude
+    if "latitude" in payload and not isinstance(
+        payload["latitude"], (float, int)
+    ):
+        raise ValueError("invalid_value: latitude")
+    if "longitude" in payload and not isinstance(
+        payload["longitude"], (float, int)
+    ):
+        raise ValueError("invalid_value: longitude")
+
+    # Create place
     p = Place(
         name=payload["name"],
         city=payload["city"],
@@ -36,9 +53,16 @@ def create_place(payload: Dict[str, Any]) -> Dict[str, Any]:
         longitude=payload.get("longitude"),
         owner_id=payload["owner_id"],
     )
+
+    # Add and commit to the database
     db.session.add(p)
     db.session.commit()
+
+    # Return the created place as a dictionary
     return _to_dict(p)
+
+
+
 
 def update_place(place_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     p = db.session.get(Place, place_id)
