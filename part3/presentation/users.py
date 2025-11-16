@@ -2,9 +2,12 @@ from __future__ import annotations
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from part3.persistence import sql_repository as repo
+from business.facade import Facade  # Import Facade class
 
 api = Namespace("users", description="User operations")
+
+# Instantiate the Facade
+facade = Facade()
 
 user_input = api.model("UserInput", {
     "first_name":  fields.String(required=True),
@@ -32,14 +35,14 @@ user_output = api.model("UserOutput", {
 class UserList(Resource):
     @api.marshal_list_with(user_output, code=200)
     def get(self):
-        return repo.list_users()
+        return facade.list_users()  # Use Facade method
 
     @api.expect(user_input, validate=True)
     @api.marshal_with(user_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
         try:
-            created = repo.create_user(data)
+            created = facade.create_user(data)  # Use Facade method
         except ValueError as e:
             msg = str(e)
             if msg in ("email_already_exists", "missing_required_fields"):
@@ -53,7 +56,7 @@ class UserList(Resource):
 class UserItem(Resource):
     @api.marshal_with(user_output, code=200)
     def get(self, user_id):
-        u = repo.get_user(user_id)
+        u = facade.get_user(user_id)  # Use Facade method
         if not u:
             api.abort(404, "User not found")
         return u
@@ -72,7 +75,7 @@ class UserItem(Resource):
             updates.pop(bad, None)
 
         try:
-            updated = repo.update_user(user_id, updates)
+            updated = facade.update_user(user_id, updates)  # Use Facade method
         except ValueError as e:
             if str(e) == "email_already_exists":
                 api.abort(400, "email_already_exists")
@@ -88,6 +91,7 @@ class UserItem(Resource):
         is_admin = bool(get_jwt().get("is_admin", False))
         if (current_user != user_id) and (not is_admin):
             api.abort(403, "You can only delete your own account (or be an admin).")
-        if not repo.delete_user(user_id):
+        if not facade.delete_user(user_id):  # Use Facade method
             api.abort(404, "User not found")
         return "", 204
+
