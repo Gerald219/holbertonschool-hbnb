@@ -11,3 +11,7 @@ class Facade:
             "password": "test1234"  # Make sure to include the password field as required
         })
 
+    def create_user(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new user in the database"""
+        return self.repo.create_user(payload)
+
