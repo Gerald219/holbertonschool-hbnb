@@ -17,4 +17,5 @@ def init_extensions(app):
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    app.config["JWT_SECRET_KEY"] = "your-secret-key"
     api.init_app(app)
