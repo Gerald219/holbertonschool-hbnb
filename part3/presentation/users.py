@@ -66,13 +66,14 @@ class UserItem(Resource):
     @api.marshal_with(user_output, code=200)
     def put(self, user_id):
         current_user = get_jwt_identity()
-        is_admin = bool(get_jwt().get("is_admin", False))
+        is_admin = bool(get_jwt().get("is_admin", False))  # Ensure this correctly retrieves 'is_admin' from the JWT.
         if (current_user != user_id) and (not is_admin):
-            api.abort(403, "You can only update your own profile (or be an admin).")
+           api.abort(403, "You can only update your own profile (or be an admin).")
 
         updates = request.get_json(force=True) or {}
         for bad in ("id", "password", "password_hash", "created_at", "updated_at", "is_admin"):
             updates.pop(bad, None)
+
 
         try:
             updated = facade.update_user(user_id, updates)  # Use Facade method
