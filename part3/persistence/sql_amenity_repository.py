@@ -1,7 +1,10 @@
 from __future__ import annotations
 from typing import Dict, Any, Optional, List
 from part3.app.extensions import db
-from part3.models import Amenity
+from business.facade import Facade  # Import the Facade class
+
+# Instantiate the Facade
+facade = Facade()
 
 def _to_dict(a: Amenity) -> Dict[str, Any]:
     return {
@@ -12,32 +15,17 @@ def _to_dict(a: Amenity) -> Dict[str, Any]:
     }
 
 def list_amenities() -> List[Dict[str, Any]]:
-    rows = Amenity.query.order_by(Amenity.created_at.asc()).all()
-    return [_to_dict(a) for a in rows]
+    return facade.list_amenities()  # Use the Facade method
 
 def get_amenity(amenity_id: str) -> Optional[Dict[str, Any]]:
-    a = db.session.get(Amenity, amenity_id)
-    return _to_dict(a) if a else None
+    return facade.get_amenity(amenity_id)  # Use the Facade method
 
 def create_amenity(payload: Dict[str, Any]) -> Dict[str, Any]:
-    a = Amenity(name=payload["name"])
-    db.session.add(a)
-    db.session.commit()
-    return _to_dict(a)
+    return facade.create_amenity(payload)  # Use the Facade method
 
 def update_amenity(amenity_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    a = db.session.get(Amenity, amenity_id)
-    if not a:
-        return None
-    if "name" in updates and updates["name"] is not None:
-        a.name = updates["name"]
-    db.session.commit()
-    return _to_dict(a)
+    return facade.update_amenity(amenity_id, updates)  # Use the Facade method
 
 def delete_amenity(amenity_id: str) -> bool:
-    a = db.session.get(Amenity, amenity_id)
-    if not a:
-        return False
-    db.session.delete(a)
-    db.session.commit()
-    return True
+    return facade.delete_amenity(amenity_id)  # Use the Facade method
+
