@@ -48,9 +48,21 @@ class PlaceList(Resource):
     @api.marshal_with(place_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
+
+        # Validate price_per_night, latitude, and longitude
+        if not data.get("price_per_night") or not isinstance(data["price_per_night"], int) or data["price_per_night"] <= 0:
+            api.abort(400, "invalid_value: price_per_night")
+    
+        if "latitude" in data and not isinstance(data["latitude"], (float, int)):
+            api.abort(400, "invalid_value: latitude")
+    
+        if "longitude" in data and not isinstance(data["longitude"], (float, int)):
+            api.abort(400, "invalid_value: longitude")
+    
         data["owner_id"] = get_jwt_identity()
         created = repo.create_place(data)
         return created, 201
+
 
 @api.route("/<string:place_id>")
 @api.param("place_id", "The place ID")
@@ -66,19 +78,21 @@ class Place(Resource):
     @api.expect(place_update, validate=True)
     @api.marshal_with(place_output, code=200)
     def put(self, place_id):
-        current_user = get_jwt_identity()
-        is_admin = bool(get_jwt().get("is_admin", False))
+    current_user = get_jwt_identity()
+    is_admin = bool(get_jwt().get("is_admin", False))
 
         existing = repo.get_place(place_id)
         if not existing:
             api.abort(404, "Place not found")
 
+        # Admin or owner check
         if not is_admin and existing.get("owner_id") != current_user:
             api.abort(403, "Only the owner (or admin) can update this place")
 
         updates = request.get_json(force=True) or {}
         updated = repo.update_place(place_id, updates)
         return updated, 200
+
 
     @jwt_required()
     @api.response(204, "Deleted")
@@ -101,6 +115,7 @@ class Place(Resource):
             api.abort(404, "Place not found")
 
         return "", 204
+
 
 @api.route("/<string:place_id>/amenities/<string:amenity_id>")
 @api.param("place_id", "The place ID")

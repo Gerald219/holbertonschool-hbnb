@@ -47,7 +47,7 @@ class SQLAlchemyRepository:
             text = str(getattr(e, "orig", e)).lower()
             if "unique" in text and "email" in text:
                 raise ValueError("email_already_exists")
-            raise
+            raise  # Raise other unexpected integrity errors
 
         return self._to_dict(u)
 
