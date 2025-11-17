@@ -1,9 +1,12 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt
-from part3.persistence import sql_amenity_repository as repo
+from business.facade import Facade  # Import Facade class
 
 api = Namespace('amenities', description='Amenity operations')
+
+# Instantiate the Facade
+facade = Facade()  # Instantiate the Facade
 
 amenity_model = api.model('Amenity', {
     'id': fields.String(readonly=True),
@@ -16,7 +19,7 @@ amenity_model = api.model('Amenity', {
 class AmenityList(Resource):
     @api.marshal_list_with(amenity_model)
     def get(self):
-        return repo.list_amenities()
+        return facade.list_amenities()  # Use Facade method
 
     @jwt_required()
     @api.expect(amenity_model, validate=True)
@@ -29,14 +32,14 @@ class AmenityList(Resource):
         name = (data.get("name") or "").strip()
         if not name:
             api.abort(400, "name is required")
-        return repo.create_amenity({"name": name}), 201
+        return facade.create_amenity({"name": name}), 201  # Use Facade method
 
 @api.route('/<string:amenity_id>')
 @api.param('amenity_id', 'The amenity ID')
 class Amenity(Resource):
     @api.marshal_with(amenity_model)
     def get(self, amenity_id):
-        amenity = repo.get_amenity(amenity_id)
+        amenity = facade.get_amenity(amenity_id)  # Use Facade method
         if not amenity:
             api.abort(404, "Amenity not found")
         return amenity
@@ -49,7 +52,7 @@ class Amenity(Resource):
         if not bool(claims.get("is_admin", False)):
             api.abort(403, "Admin only: you must be an admin to update amenities")
         updates = request.get_json(force=True) or {}
-        updated = repo.update_amenity(amenity_id, updates)
+        updated = facade.update_amenity(amenity_id, updates)  # Use Facade method
         if not updated:
             api.abort(404, "Amenity not found")
         return updated
@@ -60,7 +63,8 @@ class Amenity(Resource):
         claims = get_jwt()
         if not bool(claims.get("is_admin", False)):
             api.abort(403, "Admin only: you must be an admin to delete amenities")
-        deleted = repo.delete_amenity(amenity_id)
+        deleted = facade.delete_amenity(amenity_id)  # Use Facade method
         if not deleted:
             api.abort(404, "Amenity not found")
         return '', 204
+
