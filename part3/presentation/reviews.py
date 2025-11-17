@@ -29,30 +29,50 @@ class ReviewList(Resource):
     def get(self):
         return repo.list_reviews()
 
-    @jwt_required()
+    @jwt_required() # <--- ADDED: Require JWT for review creation
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
     def post(self):
         data = request.get_json(force=True) or {}
-        payload = {
-            "text": data.get("text"),
-            "place_id": data.get("place_id"),
-            "user_id": get_jwt_identity(),
-        }
+        # Get the authenticated user's ID from the JWT token
+        user_id = get_jwt_identity() # <--- ADDED/FIXED: Extract user_id from token
+        
+        place_id = data.get("place_id")
+        # Removed: user_id = data.get("user_id") - now extracted from token
+        text = (data.get("text") or "").strip()
+
+        # Update data dictionary to include user_id from token for repository call
+        data['user_id'] = user_id # <--- ADDED: Inject user_id into data for repo
+
+        if not text or not place_id: # <--- FIXED: user_id check is now redundant
+            api.abort(400, "missing_required_fields")
+
+        place = repo.get_place(place_id)
+        if not place:
+            api.abort(404, "Place not found")
+
+        if place.owner_id == user_id:
+            api.abort(403, "You cannot review your own place")
+
+        existing = repo.get_review_by_user_and_place(user_id, place_id)
+        if existing:
+            api.abort(409, "You already reviewed this place")
+
         try:
-            created = repo.create_review(payload)
+            # Data dictionary now includes place_id, text, and user_id
+            created = repo.create_review(data)
         except ValueError as e:
-            m = str(e)
-            if m == "missing_required_fields":
-                api.abort(400, m)
-            if m == "place_not_found":
+            msg = str(e)
+            if msg == "place_not_found":
                 api.abort(404, "Place not found")
-            if m == "self_review_forbidden":
-                api.abort(403, "You cannot review your own place")
-            if m == "duplicate_review":
+            if msg == "duplicate_review":
                 api.abort(409, "You already reviewed this place")
-            api.abort(400, m)
+            if msg == "self_review_forbidden":
+                api.abort(403, "You cannot review your own place")
+            api.abort(400, msg)
+
         return created, 201
+
 
 @api.route("/<string:review_id>")
 @api.param("review_id", "The review ID")
