@@ -93,3 +93,13 @@ def detach_amenity(place_id: str, amenity_id: str) -> Optional[Dict[str, Any]]:
         p.amenities.remove(a)
         db.session.commit()
     return _to_dict(p)
+def delete_place(place_id: str) -> bool:
+    """Delete a place by id. Return True if deleted, False if not found."""
+    place = Place.query.get(place_id)
+    if not place:
+        return False
+
+    db.session.delete(place)
+    db.session.commit()
+    return True
+
