@@ -37,6 +37,7 @@ place_update = api.model("PlaceUpdate", {
     "longitude": fields.Float,
 })
 
+
 @api.route("/")
 class PlaceList(Resource):
     @api.marshal_list_with(place_output)
@@ -49,16 +50,21 @@ class PlaceList(Resource):
     def post(self):
         data = request.get_json(force=True) or {}
 
-        # Validate price_per_night, latitude, and longitude
-        if not data.get("price_per_night") or not isinstance(data["price_per_night"], int) or data["price_per_night"] <= 0:
+        # price_per_night must be a positive int
+        if (
+            not data.get("price_per_night")
+            or not isinstance(data["price_per_night"], int)
+            or data["price_per_night"] <= 0
+        ):
             api.abort(400, "invalid_value: price_per_night")
-    
+
+        # latitude/longitude, if present, must be numeric
         if "latitude" in data and not isinstance(data["latitude"], (float, int)):
             api.abort(400, "invalid_value: latitude")
-    
+
         if "longitude" in data and not isinstance(data["longitude"], (float, int)):
             api.abort(400, "invalid_value: longitude")
-    
+
         data["owner_id"] = get_jwt_identity()
         created = repo.create_place(data)
         return created, 201
@@ -78,8 +84,8 @@ class Place(Resource):
     @api.expect(place_update, validate=True)
     @api.marshal_with(place_output, code=200)
     def put(self, place_id):
-    current_user = get_jwt_identity()
-    is_admin = bool(get_jwt().get("is_admin", False))
+        current_user = get_jwt_identity()
+        is_admin = bool(get_jwt().get("is_admin", False))
 
         existing = repo.get_place(place_id)
         if not existing:
@@ -93,23 +99,19 @@ class Place(Resource):
         updated = repo.update_place(place_id, updates)
         return updated, 200
 
-
     @jwt_required()
     @api.response(204, "Deleted")
     def delete(self, place_id):
         current_user = get_jwt_identity()
         is_admin = bool(get_jwt().get("is_admin", False))
 
-        # Check if the place exists
         existing = repo.get_place(place_id)
         if not existing:
             api.abort(404, "Place not found")
 
-        # Check if user is owner or admin
         if existing.get("owner_id") != current_user and not is_admin:
             api.abort(403, "Only the owner or an admin can delete this place")
 
-        # Delete the place
         deleted = repo.delete_place(place_id)
         if not deleted:
             api.abort(404, "Place not found")
@@ -132,7 +134,10 @@ class PlaceAmenity(Resource):
             api.abort(404, "Place not found")
 
         if (existing.get("owner_id") != current_user) and (not is_admin):
-            api.abort(403, "Only the owner or an admin can modify amenities for this place")
+            api.abort(
+                403,
+                "Only the owner or an admin can modify amenities for this place",
+            )
 
         updated = repo.attach_amenity(place_id, amenity_id)
         if not updated:
@@ -150,7 +155,10 @@ class PlaceAmenity(Resource):
             api.abort(404, "Place not found")
 
         if (existing.get("owner_id") != current_user) and (not is_admin):
-            api.abort(403, "Only the owner or an admin can change amenities for this place")
+            api.abort(
+                403,
+                "Only the owner or an admin can change amenities for this place",
+            )
 
         updated = repo.detach_amenity(place_id, amenity_id)
         if not updated:

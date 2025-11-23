@@ -1,4 +1,5 @@
 from persistence.sql_repository import SQLAlchemyRepository  # Import the SQLAlchemyRepository
+from typing import Dict, Any
 
 class Facade:
     def __init__(self):
