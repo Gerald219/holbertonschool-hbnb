@@ -1,3 +1,4 @@
+"""SQLAlchemy helpers for creating, reading, updating and deleting Review rows."""
 from __future__ import annotations
 from typing import Dict, Any, Optional, List
 from part3.app.extensions import db
