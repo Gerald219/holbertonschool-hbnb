@@ -23,52 +23,40 @@ review_update = api.model("ReviewUpdate", {
     "text": fields.String(required=True),
 })
 
+
 @api.route("/")
 class ReviewList(Resource):
     @api.marshal_list_with(review_output)
     def get(self):
+        ## list all reviews
         return repo.list_reviews()
 
-    @jwt_required() # <--- ADDED: Require JWT for review creation
+    @jwt_required()
     @api.expect(review_input, validate=True)
     @api.marshal_with(review_output, code=201)
     def post(self):
+        ## create a new review for a place (user comes from JWT)
         data = request.get_json(force=True) or {}
-        # Get the authenticated user's ID from the JWT token
-        user_id = get_jwt_identity() # <--- ADDED/FIXED: Extract user_id from token
-        
-        place_id = data.get("place_id")
-        # Removed: user_id = data.get("user_id") - now extracted from token
-        text = (data.get("text") or "").strip()
+        user_id = get_jwt_identity()
 
-        # Update data dictionary to include user_id from token for repository call
-        data['user_id'] = user_id # <--- ADDED: Inject user_id into data for repo
-
-        if not text or not place_id: # <--- FIXED: user_id check is now redundant
-            api.abort(400, "missing_required_fields")
-
-        place = repo.get_place(place_id)
-        if not place:
-            api.abort(404, "Place not found")
-
-        if place.owner_id == user_id:
-            api.abort(403, "You cannot review your own place")
-
-        existing = repo.get_review_by_user_and_place(user_id, place_id)
-        if existing:
-            api.abort(409, "You already reviewed this place")
+        payload = {
+            "text": data.get("text"),
+            "place_id": data.get("place_id"),
+            "user_id": user_id,
+        }
 
         try:
-            # Data dictionary now includes place_id, text, and user_id
-            created = repo.create_review(data)
+            created = repo.create_review(payload)
         except ValueError as e:
             msg = str(e)
+            if msg == "missing_required_fields":
+                api.abort(400, "missing_required_fields")
             if msg == "place_not_found":
                 api.abort(404, "Place not found")
-            if msg == "duplicate_review":
-                api.abort(409, "You already reviewed this place")
             if msg == "self_review_forbidden":
                 api.abort(403, "You cannot review your own place")
+            if msg == "duplicate_review":
+                api.abort(409, "You already reviewed this place")
             api.abort(400, msg)
 
         return created, 201
@@ -79,6 +67,7 @@ class ReviewList(Resource):
 class Review(Resource):
     @api.marshal_with(review_output)
     def get(self, review_id):
+        ## fetch single review
         r = repo.get_review(review_id)
         if not r:
             api.abort(404, "Review not found")
@@ -88,6 +77,7 @@ class Review(Resource):
     @api.expect(review_update, validate=True)
     @api.marshal_with(review_output, code=200)
     def put(self, review_id):
+        ## author-only edit
         updates = request.get_json(force=True) or {}
         try:
             updated = repo.update_review(review_id, updates, actor_id=get_jwt_identity())
@@ -105,10 +95,15 @@ class Review(Resource):
     @jwt_required()
     @api.response(204, "Deleted")
     def delete(self, review_id):
+        ## author OR admin delete
         claims = get_jwt()
         is_admin = bool(claims.get("is_admin", False))
         try:
-            ok = repo.delete_review(review_id, actor_id=get_jwt_identity(), is_admin=is_admin)
+            ok = repo.delete_review(
+                review_id,
+                actor_id=get_jwt_identity(),
+                is_admin=is_admin,
+            )
         except ValueError as e:
             if str(e) == "forbidden_delete":
                 api.abort(403, "Only the author or an admin can delete this review")
@@ -116,3 +111,4 @@ class Review(Resource):
         if not ok:
             api.abort(404, "Review not found")
         return "", 204
+
