@@ -2,7 +2,7 @@ from __future__ import annotations
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
-from business.facade import Facade  # Import Facade class
+from part3.business.facade import Facade  # Import Facade class
 
 api = Namespace("users", description="User operations")
 
