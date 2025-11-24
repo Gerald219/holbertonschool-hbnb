@@ -166,5 +166,63 @@ All tests live under \`part3/tests/\`.
 These tests are your safety net.  
 If \`pytest -q\` passes, the main behavior is correct.
 
-EOF
 
+---
+
+## ER Diagram — HBnB Part 3 Database
+
+This diagram shows how the main tables connect in Part 3: users own places, guests write reviews, and places are linked to amenities via a join table.
+
+```mermaid
+erDiagram
+  USER {
+    string id PK
+    string first_name
+    string last_name
+    string email
+    string password_hash
+    string is_admin
+    string created_at
+    string updated_at
+  }
+
+  PLACE {
+    string id PK
+    string name
+    string description
+    string city
+    int    price_per_night
+    string latitude
+    string longitude
+    string owner_id FK
+    string created_at
+    string updated_at
+  }
+
+  REVIEW {
+    string id PK
+    string text
+    string user_id FK
+    string place_id FK
+    string created_at
+    string updated_at
+  }
+
+  AMENITY {
+    string id PK
+    string name
+    string created_at
+    string updated_at
+  }
+
+  PLACE_AMENITY {
+    string place_id FK
+    string amenity_id FK
+  }
+
+  USER  ||--o{ PLACE        : owns
+  USER  ||--o{ REVIEW       : writes
+  PLACE ||--o{ REVIEW       : has
+  PLACE }o--o{ AMENITY      : has
+
+```
