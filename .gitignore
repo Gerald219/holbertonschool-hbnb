@@ -4,3 +4,14 @@ instance/
 *.db
 *.sqlite3
 *.bak
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
+
+# Local dev database for part 3
+part3/hbnb_dev.db
