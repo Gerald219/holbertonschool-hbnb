@@ -8,6 +8,11 @@ def create_app(config_object=DevConfig):
     app = Flask(__name__)
     app.config.from_object(config_object)
 
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        raise ValueError("DATABASE_URL must be set for this configuration")
+    if not app.config.get("JWT_SECRET_KEY"):
+        raise ValueError("JWT_SECRET_KEY must be set for this configuration")
+
     # init shared extensions
     init_extensions(app)
 

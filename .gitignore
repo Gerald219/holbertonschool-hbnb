@@ -15,3 +15,11 @@ __pycache__/
 
 # Local dev database for part 3
 part3/hbnb_dev.db
+
+# Local credentials and test output
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,39 +1,8 @@
 import uuid
 
-import pytest
-from part3.app import create_app
-from part3.app.extensions import db
 
 
 ## app + DB fixtures
-
-@pytest.fixture
-def app():
-    ## real app in testing mode
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
-
-
-@pytest.fixture
-def client(app):
-    ## HTTP client to call API
-    return app.test_client()
-
-
-@pytest.fixture
-def setup_db(app):
-    ## clean DB before each test module
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-    yield db
-    with app.app_context():
-        db.session.remove()
-        db.drop_all()
-
-
-## helpers
 
 def _unique_email() -> str:
     return f"place_tester_{uuid.uuid4().hex}@example.com"

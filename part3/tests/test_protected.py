@@ -1,41 +1,8 @@
 import uuid
 
-import pytest
-from flask import Flask
-from part3.app import create_app
-from part3.app.extensions import db
 
 
 ## build app + DB per test file
-
-@pytest.fixture
-def app():
-    ## normal app, but in testing mode
-    app = create_app()
-    app.config["TESTING"] = True
-    return app
-
-
-@pytest.fixture
-def client(app):
-    ## HTTP client to hit endpoints
-    return app.test_client()
-
-
-@pytest.fixture
-def setup_db(app):
-    ## start each test with a clean DB
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-    yield db
-    ## tear down DB after tests
-    with app.app_context():
-        db.session.remove()
-        db.drop_all()
-
-
-## helpers
 
 def _unique_email() -> str:
     ## avoid clashes with old rows
